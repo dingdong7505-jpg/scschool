@@ -216,7 +216,7 @@ const Sel=({label,value,onChange,options})=>(
 
 
 // ── 공개 홈페이지 ─────────────────────────────────────────
-const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,authUser,onRequestDownload})=>{
+const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,authUser,onRequestDownload,onRequestLogin})=>{
   const [scrolled,setScrolled]=useState(false);
   const [activeSec,setActiveSec]=useState(null); // null = 전체
   const [mobileMenu,setMobileMenu]=useState(false);
@@ -259,6 +259,8 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
   const visiblePhotos = photos.filter(p=>p.visibility!=='member'||authUser);
   const filteredPhotos = activeSec ? visiblePhotos.filter(p=>p.sectionId===activeSec||p.sectionId==='all') : visiblePhotos;
   const byAlbum={}; filteredPhotos.forEach(p=>{ if(!byAlbum[p.album])byAlbum[p.album]=[]; byAlbum[p.album].push(p); });
+  const allInSection = activeSec ? photos.filter(p=>p.sectionId===activeSec||p.sectionId==='all') : photos;
+  const hasMemberOnlyHidden = !authUser && filteredPhotos.length===0 && allInSection.length>0;
 
   const heroTc = site.heroTextColor || '#ffffff';
   const heroOv = (site.heroOverlay != null ? site.heroOverlay : 30) / 100;
@@ -494,7 +496,13 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
               </div>
             ))}
           </div>
-          {filteredPhotos.length===0&&<p className="text-center text-gray-400 py-12">사진이 없습니다.</p>}
+          {filteredPhotos.length===0&&!hasMemberOnlyHidden&&<p className="text-center text-gray-400 py-12">사진이 없습니다.</p>}
+          {hasMemberOnlyHidden&&(
+            <div className="text-center py-12">
+              <p className="text-gray-400 mb-3">🔒 로그인 후 볼 수 있는 사진이 있습니다.</p>
+              <button onClick={onRequestLogin} className="px-5 py-2.5 bg-[#1a1a1a] text-white rounded-full text-sm font-semibold hover:bg-[#333] transition-all">로그인 / 회원가입</button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1410,6 +1418,7 @@ const App = () => {
     setPendingDownload(p);
     setShowLogin(true);
   };
+  const handleRequestLogin = () => { if (!authUser) setShowLogin(true); };
   const handleLogout = () => {
     setAuthUser(null); setShowManage(false); setShowAccountMenu(false);
     if (window.google && site.googleClientId) { try { window.google.accounts.id.disableAutoSelect(); } catch(e){} }
@@ -1439,7 +1448,7 @@ const App = () => {
       <Homepage
         site={site} sections={sections} classes={classes} students={students}
         prayers={prayers} setPrayers={setPrayers} photos={photos}
-        onOpenManage={handleTeacherBtn} authUser={authUser} onRequestDownload={handleRequestDownload}
+        onOpenManage={handleTeacherBtn} authUser={authUser} onRequestDownload={handleRequestDownload} onRequestLogin={handleRequestLogin}
       />
 
       {showLogin && (
