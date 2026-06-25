@@ -1205,11 +1205,12 @@ const hashPw = str => {
 };
 
 // ── 인증 모달 ─────────────────────────────────────────────
-const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
+const AuthModal = ({ site, accounts, setAccounts, requireRole, onSuccess, onClose }) => {
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', password2: '' });
   const [err, setErr] = useState('');
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErr(''); };
+  const isTeacher = requireRole === 'teacher';
 
   const gRef = React.useRef();
   useEffect(() => {
@@ -1221,8 +1222,8 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
           const p = decodeJWT(res.credential);
           if (!p) { setErr('Google 인증 오류'); return; }
           const allowed = site.allowedEmails || [];
-          if (allowed.length > 0 && !allowed.includes(p.email)) { setErr('허용되지 않은 이메일: ' + p.email); return; }
-          onSuccess({ name: p.name, email: p.email, picture: p.picture, provider: 'google' });
+          if (isTeacher && allowed.length > 0 && !allowed.includes(p.email)) { setErr('허용되지 않은 이메일: ' + p.email); return; }
+          onSuccess({ name: p.name, email: p.email, picture: p.picture, provider: 'google', role: isTeacher ? 'teacher' : 'member' });
         },
       });
       window.google.accounts.id.renderButton(gRef.current, { theme: 'outline', size: 'large', width: 300, text: 'signin_with', shape: 'pill', locale: 'ko' });
@@ -1234,7 +1235,8 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
     const acc = accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase());
     if (!acc) { setErr('등록되지 않은 이메일입니다.'); return; }
     if (acc.passwordHash !== hashPw(form.password)) { setErr('비밀번호가 틀렸습니다.'); return; }
-    onSuccess({ name: acc.name, email: acc.email, provider: 'email' });
+    if (isTeacher && acc.role === 'member') { setErr('교사 계정이 아닙니다. 일반 회원은 사진 다운로드만 가능합니다.'); return; }
+    onSuccess({ name: acc.name, email: acc.email, provider: 'email', role: acc.role || 'teacher' });
   };
 
   const handleSignup = () => {
@@ -1243,9 +1245,10 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
     if (form.password.length < 6) { setErr('비밀번호는 6자 이상이어야 합니다.'); return; }
     if (form.password !== form.password2) { setErr('비밀번호가 일치하지 않습니다.'); return; }
     if (accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase())) { setErr('이미 등록된 이메일입니다.'); return; }
-    const newAcc = { id: nextId(accounts), name: form.name.trim(), email: form.email.trim(), passwordHash: hashPw(form.password) };
+    const role = isTeacher ? 'teacher' : 'member';
+    const newAcc = { id: nextId(accounts), name: form.name.trim(), email: form.email.trim(), passwordHash: hashPw(form.password), role };
     setAccounts(p => [...p, newAcc]);
-    onSuccess({ name: newAcc.name, email: newAcc.email, provider: 'email' });
+    onSuccess({ name: newAcc.name, email: newAcc.email, provider: 'email', role });
   };
 
   return (
@@ -1254,8 +1257,8 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
         <div className="bg-[#1a1a1a] px-6 py-5 text-center">
           <div className="text-[#b8934a] text-3xl mb-2">✝</div>
-          <h2 className="text-white font-bold text-lg">교사 로그인</h2>
-          <p className="text-white/40 text-xs mt-1">{site.churchName}</p>
+          <h2 className="text-white font-bold text-lg">{isTeacher ? '교사 로그인' : '회원 로그인'}</h2>
+          <p className="text-white/40 text-xs mt-1">{isTeacher ? site.churchName : '회원가입 후 사진을 다운로드할 수 있어요'}</p>
         </div>
 
         {site.googleClientId && (
@@ -1338,11 +1341,13 @@ const App = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [pendingDownload, setPendingDownload] = useState(null);
+  const [loginIntent, setLoginIntent] = useState('member');
 
-  const handleTeacherBtn = () => { if (authUser) { setShowManage(true); return; } setShowLogin(true); };
+  const handleTeacherBtn = () => { if (authUser?.role === 'teacher') { setShowManage(true); return; } setLoginIntent('teacher'); setShowLogin(true); };
   const handleRequestDownload = p => {
     if (authUser) { downloadDataUrl(p.src, `${p.album || 'photo'}${p.caption ? '_' + p.caption : ''}.jpg`); return; }
     setPendingDownload(p);
+    setLoginIntent('member');
     setShowLogin(true);
   };
   const handleLogout = () => {
@@ -1377,17 +1382,18 @@ const App = () => {
           site={site}
           accounts={accounts}
           setAccounts={setAccounts}
+          requireRole={loginIntent === 'teacher' ? 'teacher' : undefined}
           onSuccess={user => {
             setAuthUser(user); setShowLogin(false);
             logLogin({ name: user.name, email: user.email || '', provider: user.provider });
             if (pendingDownload) { downloadDataUrl(pendingDownload.src, `${pendingDownload.album || 'photo'}${pendingDownload.caption ? '_' + pendingDownload.caption : ''}.jpg`); setPendingDownload(null); }
-            else { setShowManage(true); }
+            else if (user.role === 'teacher') { setShowManage(true); }
           }}
           onClose={() => { setShowLogin(false); setPendingDownload(null); }}
         />
       )}
 
-      {showManage && authUser && (
+      {showManage && authUser?.role === 'teacher' && (
         <ManagePanel
           onClose={() => setShowManage(false)}
           authUser={authUser}
