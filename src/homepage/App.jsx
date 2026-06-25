@@ -1,3 +1,475 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+
+// ── 데이터 ──────────────────────────────────────────────
+const DEFAULT_SITE = {
+  churchName: '○○교회 교회학교',
+  subtitle: '하나님의 사랑 안에서 함께 자라가는 아이들',
+  heroVerse: '"마땅히 행할 길을 아이에게 가르치라 그리하면 늙어도 그것을 떠나지 아니하리라"',
+  heroVerseRef: '잠언 22:6',
+  announcement: '',
+  adminPin: '1234',
+  googleClientId: '',
+  allowedEmails: [],
+  heroBgType: 'gradient',   // 'gradient' | 'image'
+  heroBgGradient: 'sky',    // preset key
+  heroBgImage: '',          // base64
+  heroTextColor: '#ffffff', // 히어로 글씨 색
+  heroOverlay: 30,          // 오버레이 어둠 강도 0~80
+};
+
+// 히어로 배경 프리셋
+const HERO_PRESETS = [
+  { key:'sky',    label:'☀️ 하늘빛',   css:'linear-gradient(135deg,#0284c7 0%,#38bdf8 50%,#7dd3fc 100%)' },
+  { key:'spring', label:'🌿 봄 초원',  css:'linear-gradient(135deg,#16a34a 0%,#4ade80 50%,#bbf7d0 100%)' },
+  { key:'sunset', label:'🌅 노을',     css:'linear-gradient(135deg,#f97316 0%,#fbbf24 50%,#fde68a 100%)' },
+  { key:'cherry', label:'🌸 벚꽃',     css:'linear-gradient(135deg,#db2777 0%,#f472b6 50%,#fda4af 100%)' },
+  { key:'ocean',  label:'🌊 바다',     css:'linear-gradient(135deg,#0f4c81 0%,#1e6fa5 50%,#38bdf8 100%)' },
+  { key:'grape',  label:'🍇 포도원',   css:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 50%,#c4b5fd 100%)' },
+  { key:'dark',   label:'🌙 다크(기존)',css:'linear-gradient(160deg,#0f1a10 0%,#1a0f08 40%,#0a0f1a 100%)' },
+];
+const DEFAULT_SECTIONS = [
+  { id:'s1', name:'영유치부', color:'rose',   emoji:'🌸', gradient:'135deg,#fb7185,#f43f5e', desc:'하나님 안에서 첫걸음을 떼는 우리 아이들' },
+  { id:'s2', name:'아동부',   color:'amber',  emoji:'🌟', gradient:'135deg,#fbbf24,#f59e0b', desc:'말씀으로 튼튼하게 자라가는 어린이들' },
+  { id:'s3', name:'학생부',   color:'teal',   emoji:'📖', gradient:'135deg,#34d399,#10b981', desc:'믿음의 반석 위에 세워지는 청소년들' },
+  { id:'s4', name:'청년부',   color:'indigo', emoji:'✝', gradient:'135deg,#818cf8,#6366f1', desc:'세상을 향해 나아가는 다음 세대' },
+];
+const DEFAULT_CLASSES = [
+  { id:'c1', name:'영아부',  sectionId:'s1' },
+  { id:'c2', name:'유치부',  sectionId:'s1' },
+  { id:'c3', name:'초등1부', sectionId:'s2' },
+  { id:'c4', name:'초등2부', sectionId:'s2' },
+  { id:'c5', name:'중등부',  sectionId:'s3' },
+  { id:'c6', name:'고등부',  sectionId:'s3' },
+  { id:'c7', name:'청년부',  sectionId:'s4' },
+];
+const INITIAL_STUDENTS = [
+  { id:1,  name:'김민준', classId:'c2', grade:'7세',   phone:'',              parentPhone:'010-1234-5678', birthDate:'2018-03-15', registeredDate:'2023-01-08', memo:'활발하고 씩씩함', active:true },
+  { id:2,  name:'이서연', classId:'c2', grade:'6세',   phone:'',              parentPhone:'010-2345-6789', birthDate:'2019-06-22', registeredDate:'2023-01-08', memo:'', active:true },
+  { id:3,  name:'박지호', classId:'c2', grade:'7세',   phone:'',              parentPhone:'010-3456-7890', birthDate:'2018-09-10', registeredDate:'2023-03-05', memo:'', active:true },
+  { id:4,  name:'최아린', classId:'c3', grade:'1학년', phone:'',              parentPhone:'010-4567-8901', birthDate:'2017-01-20', registeredDate:'2022-02-06', memo:'피아노 특기', active:true },
+  { id:5,  name:'정우진', classId:'c3', grade:'2학년', phone:'',              parentPhone:'010-5678-9012', birthDate:'2016-04-11', registeredDate:'2022-02-06', memo:'', active:true },
+  { id:6,  name:'강하은', classId:'c3', grade:'3학년', phone:'010-6789-0123', parentPhone:'010-7890-1234', birthDate:'2015-07-30', registeredDate:'2021-03-07', memo:'찬양팀', active:true },
+  { id:7,  name:'윤도현', classId:'c3', grade:'1학년', phone:'',              parentPhone:'010-8901-2345', birthDate:'2017-11-05', registeredDate:'2023-01-08', memo:'', active:true },
+  { id:8,  name:'임채원', classId:'c4', grade:'4학년', phone:'010-9012-3456', parentPhone:'010-0123-4567', birthDate:'2014-02-28', registeredDate:'2020-03-01', memo:'독서를 좋아함', active:true },
+  { id:9,  name:'한소희', classId:'c4', grade:'5학년', phone:'010-1122-3344', parentPhone:'010-2233-4455', birthDate:'2013-08-17', registeredDate:'2020-03-01', memo:'', active:true },
+  { id:10, name:'오준서', classId:'c4', grade:'6학년', phone:'010-3344-5566', parentPhone:'010-4455-6677', birthDate:'2012-12-03', registeredDate:'2019-03-03', memo:'반장', active:true },
+  { id:11, name:'신예린', classId:'c4', grade:'4학년', phone:'010-5566-7788', parentPhone:'010-6677-8899', birthDate:'2014-05-19', registeredDate:'2021-01-10', memo:'', active:true },
+  { id:12, name:'배지훈', classId:'c5', grade:'중1',   phone:'010-7788-9900', parentPhone:'010-8899-0011', birthDate:'2011-07-08', registeredDate:'2023-03-05', memo:'', active:true },
+  { id:13, name:'조수아', classId:'c5', grade:'중2',   phone:'010-9900-1122', parentPhone:'010-0011-2233', birthDate:'2010-03-24', registeredDate:'2022-03-06', memo:'찬양팀 드럼', active:true },
+  { id:14, name:'류민서', classId:'c5', grade:'중3',   phone:'010-1122-3344', parentPhone:'010-2233-4455', birthDate:'2009-10-12', registeredDate:'2021-03-07', memo:'', active:true },
+  { id:15, name:'나현우', classId:'c5', grade:'중1',   phone:'010-3344-5566', parentPhone:'010-4455-6677', birthDate:'2011-01-29', registeredDate:'2023-01-08', memo:'', active:true },
+  { id:16, name:'마은지', classId:'c6', grade:'고1',   phone:'010-5566-7788', parentPhone:'010-6677-8899', birthDate:'2008-06-14', registeredDate:'2022-03-06', memo:'예배 준비 봉사', active:true },
+  { id:17, name:'서태양', classId:'c6', grade:'고2',   phone:'010-7788-9900', parentPhone:'010-8899-0011', birthDate:'2007-09-05', registeredDate:'2021-03-07', memo:'', active:true },
+  { id:18, name:'권나영', classId:'c6', grade:'고3',   phone:'010-9900-1122', parentPhone:'010-0011-2233', birthDate:'2006-04-20', registeredDate:'2020-03-01', memo:'수험생', active:true },
+  { id:19, name:'문지원', classId:'c6', grade:'고1',   phone:'010-1234-5670', parentPhone:'010-2345-6780', birthDate:'2008-11-30', registeredDate:'2023-03-05', memo:'', active:true },
+  { id:20, name:'이준혁', classId:'c7', grade:'대학생',phone:'010-2222-3333', parentPhone:'',              birthDate:'2003-05-12', registeredDate:'2022-03-06', memo:'', active:true },
+  { id:21, name:'박수연', classId:'c7', grade:'청년',  phone:'010-3333-4444', parentPhone:'',              birthDate:'2001-08-25', registeredDate:'2021-01-10', memo:'찬양팀', active:true },
+];
+const INITIAL_TEACHERS = [
+  { id:1, name:'이지은', classId:'c2', phone:'010-1111-2222', email:'jieun@church.com',   memo:'10년 경력' },
+  { id:2, name:'박성민', classId:'c3', phone:'010-2222-3333', email:'sungmin@church.com', memo:'' },
+  { id:3, name:'김하늘', classId:'c4', phone:'010-3333-4444', email:'haneul@church.com',  memo:'음악 전공' },
+  { id:4, name:'정다운', classId:'c5', phone:'010-4444-5555', email:'dawoon@church.com',  memo:'' },
+  { id:5, name:'최예진', classId:'c6', phone:'010-5555-6666', email:'yejin@church.com',   memo:'' },
+];
+const INITIAL_MEETINGS = [
+  { id:1, title:'6월 교사 회의록',        date:'2026-06-01', uploader:'이지은', category:'회의록',   content:'· 여름성경학교 준비\n· 출석률 개선 방안' },
+  { id:2, title:'상반기 교육 계획서',      date:'2026-01-05', uploader:'박성민', category:'교육자료', content:'상반기 교육 목표 및 커리큘럼' },
+  { id:3, title:'여름성경학교 안내문',     date:'2026-05-20', uploader:'김하늘', category:'공지',     content:'일정: 8월 3~5일 / 장소: 교육관' },
+];
+const INITIAL_PHOTOS = [
+  { id:1, album:'2026 어린이날', sectionId:'s2', date:'2026-05-05', caption:'어린이날 행사', src:'' },
+  { id:2, album:'부활절 예배',   sectionId:'all',date:'2026-04-20', caption:'부활절 연합 예배', src:'' },
+  { id:3, album:'영유치부 봄 소풍',sectionId:'s1',date:'2026-04-10', caption:'봄 소풍', src:'' },
+];
+const INITIAL_PRAYERS = [
+  { id:1, title:'여름성경학교를 위해', content:'이번 여름성경학교가 은혜롭게 진행되도록 기도해주세요.', author:'이지은', date:'2026-06-10', answered:false },
+  { id:2, title:'수험생 권나영 자매', content:'수능을 준비하는 권나영 자매를 위해 기도 부탁드립니다.', author:'최예진', date:'2026-06-15', answered:false },
+];
+
+function genAttendance() {
+  const r = {}; const now = new Date();
+  for (let w=0;w<12;w++) {
+    const d=new Date(now); d.setDate(d.getDate()-d.getDay()-w*7);
+    const ds=d.toISOString().split('T')[0]; r[ds]={};
+    INITIAL_STUDENTS.forEach(s=>{ const x=Math.random(); r[ds][s.id]=x>0.15?'출석':x>0.08?'결석':x>0.04?'조퇴':'공결'; });
+  }
+  return r;
+}
+
+// ── 유틸 ─────────────────────────────────────────────────
+function useLS(key,init){
+  const [v,setV]=useState(()=>{ try{const s=localStorage.getItem(key);return s?JSON.parse(s):(typeof init==='function'?init():init);}catch{return typeof init==='function'?init():init;} });
+  useEffect(()=>{ try{localStorage.setItem(key,JSON.stringify(v));}catch{} },[key,v]);
+  return [v,setV];
+}
+const todayStr=()=>new Date().toISOString().split('T')[0];
+const fmt=d=>d?d.replace(/-/g,'.'):''  ;
+function getDUB(bd){ if(!bd)return null; const now=new Date(),[,m,day]=bd.split('-').map(Number),next=new Date(now.getFullYear(),m-1,day); if(next<now)next.setFullYear(now.getFullYear()+1); const diff=Math.ceil((next-now)/86400000); return diff===365?0:diff; }
+const isThisWeek=bd=>{ const d=getDUB(bd);return d!==null&&d<=7; };
+const isThisMonth=bd=>{ if(!bd)return false;return parseInt(bd.split('-')[1])===new Date().getMonth()+1; };
+const getAge=bd=>{ if(!bd)return '';return new Date().getFullYear()-parseInt(bd.split('-')[0])+'세'; };
+const getBMMDD=bd=>{ if(!bd)return '';const[,m,d]=bd.split('-');return `${m}월 ${d}일`; };
+const nextId=arr=>arr.length?Math.max(...arr.map(x=>x.id))+1:1;
+const decodeJWT=token=>{ try{const b=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(b));}catch{return null;} };
+
+// ── 공통 컴포넌트 ─────────────────────────────────────────
+const Modal=({title,onClose,children,wide=false})=>(
+  <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center" style={{background:'rgba(0,0,0,0.6)'}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+    <div className={`bg-white w-full ${wide?'sm:max-w-2xl':'sm:max-w-md'} rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto`}>
+      <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-3xl sm:rounded-t-2xl">
+        <h3 className="font-bold text-gray-900 text-lg">{title}</h3>
+        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors">✕</button>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  </div>
+);
+
+const GoldBtn=({children,onClick,cls='',outline=false})=>(
+  <button onClick={onClick} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all active:scale-95 ${outline?'border-2 border-[#b8934a] text-[#b8934a] hover:bg-[#b8934a] hover:text-white':'bg-[#b8934a] hover:bg-[#a07c35] text-white shadow-md'} ${cls}`}>{children}</button>
+);
+const ForestBtn=({children,onClick,cls=''})=>(
+  <button onClick={onClick} className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-[#3d6b4f] hover:bg-[#2d5240] text-white shadow-md transition-all active:scale-95 ${cls}`}>{children}</button>
+);
+const Inp=({label,value,onChange,type='text',placeholder='',required=false})=>(
+  <div className="flex flex-col gap-1">
+    {label&&<label className="text-sm font-medium text-gray-700">{label}{required&&<span className="text-red-400 ml-0.5">*</span>}</label>}
+    <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+      className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#b8934a] focus:ring-2 focus:ring-[#b8934a]/20 outline-none transition-all"/>
+  </div>
+);
+const Sel=({label,value,onChange,options})=>(
+  <div className="flex flex-col gap-1">
+    {label&&<label className="text-sm font-medium text-gray-700">{label}</label>}
+    <select value={value} onChange={e=>onChange(e.target.value)} className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] bg-white">
+    {options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+  </select>
+</div>
+);
+
+
+// ── 공개 홈페이지 ─────────────────────────────────────────
+const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage})=>{
+  const [scrolled,setScrolled]=useState(false);
+  const [activeSec,setActiveSec]=useState(null); // null = 전체
+  const [mobileMenu,setMobileMenu]=useState(false);
+  const [showPrayerForm,setShowPrayerForm]=useState(false);
+
+  useEffect(()=>{
+    const fn=()=>setScrolled(window.scrollY>60);
+    window.addEventListener('scroll',fn);
+    return ()=>window.removeEventListener('scroll',fn);
+  },[]);
+
+  const active=students.filter(s=>s.active);
+  const weekBdays=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getDUB(a.birthDate)-getDUB(b.birthDate));
+  const EMOJIS=['🌸','🌿','⛅','🌟','🙏','❤️','✝️','🎉','📖','🕊️'];
+
+  // 섹션별 색상 테마
+  const secTheme={
+    rose:  {bg:'#7c2d2d',light:'#fdf2f2',accent:'#dc2626',text:'rose'},
+    amber: {bg:'#7c5a1a',light:'#fdf8ee',accent:'#d97706',text:'amber'},
+    teal:  {bg:'#1a4a3a',light:'#f0fdf8',accent:'#0d9488',text:'teal'},
+    indigo:{bg:'#1a1a4a',light:'#f0f0ff',accent:'#6366f1',text:'indigo'},
+  };
+
+  const navLinks=[
+    {label:'홈',href:'#home'},
+    {label:'교회학교 소개',href:'#about'},
+    {label:'부서 안내',href:'#sections'},
+    {label:'갤러리',href:'#gallery'},
+    {label:'기도제목',href:'#prayers'},
+  ];
+
+  const scrollTo=id=>{ document.getElementById(id)?.scrollIntoView({behavior:'smooth'}); setMobileMenu(false); };
+
+  const filteredPhotos = activeSec ? photos.filter(p=>p.sectionId===activeSec||p.sectionId==='all') : photos;
+  const byAlbum={}; filteredPhotos.forEach(p=>{ if(!byAlbum[p.album])byAlbum[p.album]=[]; byAlbum[p.album].push(p); });
+
+  const heroTc = site.heroTextColor || '#ffffff';
+  const heroOv = (site.heroOverlay != null ? site.heroOverlay : 30) / 100;
+  const heroShadow = '0 2px 12px rgba(0,0,0,0.6)';
+
+  return (
+    <div className="font-serif">
+      {/* ── 고정 네비게이션 ── */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled?'bg-white/95 backdrop-blur-md shadow-sm':'bg-black/20 backdrop-blur-sm'}`}>
+        <div className="max-w-7xl mx-auto px-6 flex items-center h-16 gap-8">
+          <div className="flex items-center gap-3 flex-1">
+            <span className={`text-xl ${scrolled?'text-[#1a1a1a]':'text-white'}`}>✝</span>
+            <span className={`font-bold text-sm tracking-wide ${scrolled?'text-[#1a1a1a]':'text-white'}`}>{site.churchName}</span>
+          </div>
+          <div className="hidden md:flex items-center gap-6">
+            {navLinks.map(l=>(
+              <button key={l.href} onClick={()=>scrollTo(l.href.slice(1))}
+                className={`text-sm font-medium tracking-wide transition-colors ${scrolled?'text-gray-600 hover:text-[#b8934a]':'text-white/80 hover:text-white'}`}>{l.label}</button>
+            ))}
+          </div>
+          <button onClick={onOpenManage}
+            className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${scrolled?'bg-[#3d6b4f] text-white hover:bg-[#2d5240]':'bg-white/15 border border-white/30 text-white hover:bg-white/25'}`}>
+            🔐 교사 로그인
+          </button>
+          <button onClick={()=>setMobileMenu(v=>!v)} className={`md:hidden ${scrolled?'text-gray-700':'text-white'} text-xl`}>☰</button>
+        </div>
+        {/* 모바일 메뉴 */}
+        {mobileMenu&&(
+          <div className="md:hidden bg-white border-t border-gray-100 px-6 py-4 space-y-3">
+            {navLinks.map(l=>(
+              <button key={l.href} onClick={()=>scrollTo(l.href.slice(1))} className="block w-full text-left text-gray-700 py-2 font-medium">{l.label}</button>
+            ))}
+            <button onClick={onOpenManage} className="w-full py-2.5 bg-[#3d6b4f] text-white rounded-xl font-semibold">🔐 교사 로그인</button>
+          </div>
+        )}
+      </nav>
+
+      {/* ── 히어로 ── */}
+      <section id="home" className="relative h-screen flex items-center justify-center overflow-hidden">
+        {/* 배경 */}
+        <div className="absolute inset-0" style={{
+          background: site.heroBgType==='image' && site.heroBgImage
+            ? `url(${site.heroBgImage}) center/cover no-repeat`
+            : (HERO_PRESETS.find(p=>p.key===(site.heroBgGradient||'sky'))?.css || HERO_PRESETS[0].css),
+        }}>
+          {/* 빛 번짐 효과 */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-[32rem] h-[32rem] rounded-full opacity-20" style={{background:'radial-gradient(circle,rgba(255,255,255,0.6) 0%,transparent 70%)'}}/>
+          </div>
+          {/* 물결 패턴 장식 */}
+          <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
+            backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.5) 1px,transparent 1px)',
+            backgroundSize:'32px 32px',
+          }}/>
+          {/* 아치형 창문 장식 */}
+          <div className="absolute inset-x-0 top-0 flex justify-center gap-16 opacity-15 pointer-events-none">
+            {[1,2,3].map(i=>(
+              <div key={i} className="w-24" style={{height:'60vh',background:'linear-gradient(to bottom,rgba(255,255,255,0.3),transparent)',borderRadius:'0 0 50% 50%',border:'1px solid rgba(255,255,255,0.3)'}}/>
+            ))}
+          </div>
+        </div>
+        {/* 오버레이 — 강도 조절 가능 */}
+        <div className="absolute inset-0" style={{background:`linear-gradient(to bottom,rgba(0,0,0,${heroOv*0.7}) 0%,rgba(0,0,0,${heroOv*0.5}) 40%,rgba(0,0,0,${heroOv}) 100%)`}}/>
+
+        {/* 콘텐츠 */}
+        <div className="relative text-center px-6 max-w-4xl mx-auto" style={{color:heroTc}}>
+          <p className="text-xs tracking-[0.4em] uppercase mb-6 font-sans opacity-90" style={{textShadow:heroShadow}}>CHURCH SCHOOL</p>
+          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6 font-jua" style={{textShadow:heroShadow}}>
+            {site.churchName}
+          </h1>
+          <p className="text-lg md:text-xl mb-8 font-medium leading-relaxed opacity-90 font-jua" style={{textShadow:heroShadow}}>
+            {site.subtitle}
+          </p>
+          {site.heroVerse&&(
+            <div className="max-w-xl mx-auto mb-8 rounded-2xl px-6 py-4" style={{background:'rgba(0,0,0,0.25)',backdropFilter:'blur(8px)',border:'1px solid rgba(255,255,255,0.25)'}}>
+              <p className="text-sm italic leading-relaxed opacity-95" style={{color:heroTc,textShadow:heroShadow}}>"{site.heroVerse.replace(/["""]/g,'')}"</p>
+              {site.heroVerseRef&&<p className="text-xs mt-2 tracking-wider opacity-70" style={{color:heroTc}}>— {site.heroVerseRef}</p>}
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button onClick={()=>scrollTo('sections')} className="px-8 py-3.5 rounded-full font-semibold text-sm bg-white text-gray-900 hover:bg-white/90 transition-all shadow-xl">부서 안내 보기</button>
+            <button onClick={onOpenManage} className="px-8 py-3.5 rounded-full font-semibold text-sm transition-all" style={{color:heroTc,background:'rgba(0,0,0,0.25)',border:'2px solid rgba(255,255,255,0.6)',backdropFilter:'blur(4px)'}}>🔐 교사 로그인</button>
+          </div>
+          {site.announcement&&(
+            <div className="mt-8 inline-block bg-white/15 border border-white/30 rounded-2xl px-5 py-3 text-sm text-white backdrop-blur-sm">
+              📢 {site.announcement}
+            </div>
+          )}
+        </div>
+        {/* 스크롤 힌트 */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-white/50">
+          <span className="text-xs tracking-widest font-sans drop-shadow">SCROLL DOWN</span>
+          <div className="w-px h-12 bg-gradient-to-b from-white/50 to-transparent"/>
+        </div>
+      </section>
+
+      {/* ── 소개 ── */}
+      <section id="about" className="py-24" style={{background:'#faf7f2'}}>
+        <div className="max-w-5xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+          <div>
+            <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-4 font-sans">ABOUT US</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 leading-snug mb-6">하나님의 말씀 위에<br/>세워지는 다음 세대</h2>
+            <p className="text-gray-600 leading-relaxed mb-6">교회학교는 아이들이 처음으로 하나님의 사랑을 배우고, 믿음의 공동체 안에서 함께 자라가는 곳입니다. 영유치부부터 청년부까지, 각 나이에 맞는 말씀 교육과 신앙 훈련을 제공합니다.</p>
+            <div className="grid grid-cols-2 gap-4">
+              {sections.map(sec=>{
+                const cnt=students.filter(s=>DEFAULT_CLASSES.find(c=>c.id===s.classId)?.sectionId===sec.id&&s.active).length;
+                return (
+                  <div key={sec.id} className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm">
+                    <span className="text-2xl">{sec.emoji}</span>
+                    <div><p className="font-bold text-gray-800 text-sm">{sec.name}</p><p className="text-xs text-gray-400">{cnt}명</p></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* 통계 카드 */}
+          <div className="grid grid-cols-2 gap-4">
+            {[{v:active.length,l:'전체 재적',s:'명'},{v:classes.length,l:'반 수',s:'개'},{v:weekBdays.length,l:'이번 주 생일',s:'명'},{v:sections.length,l:'부서',s:'개'}].map((c,i)=>(
+              <div key={i} className="bg-white rounded-2xl p-6 shadow-sm text-center border border-gray-50">
+                <p className="text-4xl font-bold text-[#b8934a] mb-1">{c.v}<span className="text-xl">{c.s}</span></p>
+                <p className="text-sm text-gray-500">{c.l}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 부서 안내 ── */}
+      <section id="sections" className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">MINISTRIES</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 font-jua">부서 안내</h2>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {sections.map(sec=>{
+              const secClasses=classes.filter(c=>c.sectionId===sec.id);
+              const cnt=students.filter(s=>secClasses.some(c=>c.id===s.classId)&&s.active).length;
+              const th=secTheme[sec.color]||secTheme.teal;
+              return (
+                <div key={sec.id} className="group rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100">
+                  <div className="h-36 flex items-center justify-center text-6xl relative" style={{background:`linear-gradient(${sec.gradient})`}}>
+                    <div className="absolute inset-0 opacity-20" style={{backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.3) 1px,transparent 1px)',backgroundSize:'20px 20px'}}/>
+                    <span className="relative">{sec.emoji}</span>
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-bold text-gray-900 text-lg mb-1 font-jua">{sec.name}</h3>
+                    <p className="text-gray-500 text-sm mb-3 leading-relaxed">{sec.desc}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap gap-1">{secClasses.map(c=><span key={c.id} className="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">{c.name}</span>)}</div>
+                      <span className="text-xs text-gray-400 font-medium">{cnt}명</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── 이번 주 생일 + 기도제목 ── */}
+      <section className="py-24" style={{background:'#faf7f2'}}>
+        <div className="max-w-5xl mx-auto px-6 grid md:grid-cols-2 gap-12">
+          {/* 생일 */}
+          <div>
+            <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">BIRTHDAYS</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">이번 주 생일 🎂</h2>
+            {weekBdays.length===0?(
+              <p className="text-gray-400 text-sm">이번 주 생일자가 없습니다.</p>
+            ):(
+              <div className="space-y-3">
+                {weekBdays.map(s=>{
+                  const cls=classes.find(c=>c.id===s.classId);
+                  return (
+                    <div key={s.id} className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm">
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{s.name[0]}</div>
+                      <div className="flex-1">
+                        <p className="font-bold text-gray-900">{s.name}</p>
+                        <p className="text-sm text-gray-500">{cls?.name} · {getBMMDD(s.birthDate)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-[#b8934a]">{getDUB(s.birthDate)===0?'🥳오늘!':`D-${getDUB(s.birthDate)}`}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {/* 기도제목 */}
+          <div id="prayers">
+            <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">PRAYERS</p>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">기도제목 🙏</h2>
+              <button onClick={()=>setShowPrayerForm(true)} className="text-sm text-[#b8934a] font-medium hover:underline">+ 등록</button>
+            </div>
+            <div className="space-y-3">
+              {prayers.filter(p=>!p.answered).slice(0,3).map(p=>(
+                <div key={p.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                  <p className="font-semibold text-gray-900 mb-1">{p.title}</p>
+                  <p className="text-sm text-gray-500 line-clamp-2">{p.content}</p>
+                  <p className="text-xs text-gray-400 mt-2">{p.author} · {fmt(p.date)}</p>
+                </div>
+              ))}
+              {prayers.filter(p=>!p.answered).length===0&&<p className="text-gray-400 text-sm">등록된 기도제목이 없습니다.</p>}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 사진 갤러리 ── */}
+      <section id="gallery" className="py-24 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-10">
+            <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">GALLERY</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">사진 갤러리</h2>
+            <div className="flex justify-center gap-2 flex-wrap">
+              <button onClick={()=>setActiveSec(null)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!activeSec?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>전체</button>
+              {sections.map(s=>(
+                <button key={s.id} onClick={()=>setActiveSec(s.id)} className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${activeSec===s.id?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{s.emoji} {s.name}</button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredPhotos.map((p,i)=>(
+              <div key={p.id} className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group cursor-pointer hover:shadow-lg transition-all">
+                {p.src?<img src={p.src} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>:(
+                  <div className="text-center">
+                    <div className="text-4xl mb-1">{EMOJIS[i%EMOJIS.length]}</div>
+                    <p className="text-xs text-gray-500 px-2">{p.caption}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {filteredPhotos.length===0&&<p className="text-center text-gray-400 py-12">사진이 없습니다.</p>}
+        </div>
+      </section>
+
+      {/* ── 푸터 ── */}
+      <footer className="py-12" style={{background:'#1a1a1a'}}>
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-[#b8934a] text-2xl">✝</span>
+            <div>
+              <p className="text-white font-bold">{site.churchName}</p>
+              <p className="text-white/40 text-sm">{site.subtitle}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={onOpenManage} className="px-5 py-2 rounded-full border border-[#b8934a] text-[#b8934a] text-sm font-medium hover:bg-[#b8934a] hover:text-white transition-all">교사 로그인</button>
+            <p className="text-white/30 text-xs">© 2026 {site.churchName}</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* 기도제목 등록 모달 */}
+      {showPrayerForm&&<PrayerFormModal onClose={()=>setShowPrayerForm(false)}/>}
+    </div>
+  );
+};
+
+// 기도제목 등록 (공개용 — App 전달 없이 독립적)
+const PrayerFormModal=({onClose})=>{
+  const [prayers,setPrayers]=useLS('prayers_v3',INITIAL_PRAYERS);
+  const [form,setForm]=useState({title:'',content:'',author:'',date:todayStr(),answered:false});
+  const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+  return (
+    <Modal title="기도제목 등록" onClose={onClose}>
+      <div className="space-y-3">
+        <Inp label="제목" value={form.title} onChange={v=>set('title',v)} required/>
+        <Inp label="올린이" value={form.author} onChange={v=>set('author',v)}/>
+        <div className="flex flex-col gap-1"><label className="text-sm font-medium text-gray-700">내용 <span className="text-red-400">*</span></label>
+          <textarea value={form.content} onChange={e=>set('content',e.target.value)} className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm h-24 resize-none outline-none focus:border-[#b8934a]"/>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">취소</button>
+          <button onClick={()=>{setPrayers(p=>[...p,{...form,id:nextId(p)}]);onClose();}}
+            className="flex-1 py-2.5 rounded-xl bg-[#3d6b4f] text-white text-sm font-medium hover:bg-[#2d5240]">등록</button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
 
 // ── 교사 관리 패널 (슬라이드 드로어) ─────────────────────
 const ManagePanel=({onClose,authUser,onLogout,site,setSite,sections,setSections,classes,setClasses,students,setStudents,teachers,setTeachers,attendance,setAttendance,meetings,setMeetings,photos,setPhotos,prayers,setPrayers})=>{
@@ -629,3 +1101,215 @@ const PinChg=({site,setSite})=>{
     </div>
   );
 };
+
+// ── 간단 해시 (로컬 앱용) ─────────────────────────────────
+const hashPw = str => {
+  const s = 'ch_salt_2025_' + str;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+  return h.toString(36);
+};
+
+// ── 인증 모달 ─────────────────────────────────────────────
+const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
+  const [tab, setTab] = useState('login');
+  const [form, setForm] = useState({ name: '', email: '', password: '', password2: '' });
+  const [err, setErr] = useState('');
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErr(''); };
+
+  const gRef = React.useRef();
+  useEffect(() => {
+    if (!site.googleClientId || !window.google || !gRef.current) return;
+    try {
+      window.google.accounts.id.initialize({
+        client_id: site.googleClientId,
+        callback: res => {
+          const p = decodeJWT(res.credential);
+          if (!p) { setErr('Google 인증 오류'); return; }
+          const allowed = site.allowedEmails || [];
+          if (allowed.length > 0 && !allowed.includes(p.email)) { setErr('허용되지 않은 이메일: ' + p.email); return; }
+          onSuccess({ name: p.name, email: p.email, picture: p.picture, provider: 'google' });
+        },
+      });
+      window.google.accounts.id.renderButton(gRef.current, { theme: 'outline', size: 'large', width: 300, text: 'signin_with', shape: 'pill', locale: 'ko' });
+    } catch (e) { console.warn('GIS error', e); }
+  }, [site.googleClientId]);
+
+  const handleLogin = () => {
+    if (!form.email || !form.password) { setErr('이메일과 비밀번호를 입력하세요.'); return; }
+    const acc = accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase());
+    if (!acc) { setErr('등록되지 않은 이메일입니다.'); return; }
+    if (acc.passwordHash !== hashPw(form.password)) { setErr('비밀번호가 틀렸습니다.'); return; }
+    onSuccess({ name: acc.name, email: acc.email, provider: 'email' });
+  };
+
+  const handleSignup = () => {
+    if (!form.name.trim()) { setErr('이름을 입력하세요.'); return; }
+    if (!form.email.includes('@')) { setErr('올바른 이메일을 입력하세요.'); return; }
+    if (form.password.length < 6) { setErr('비밀번호는 6자 이상이어야 합니다.'); return; }
+    if (form.password !== form.password2) { setErr('비밀번호가 일치하지 않습니다.'); return; }
+    if (accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase())) { setErr('이미 등록된 이메일입니다.'); return; }
+    const newAcc = { id: nextId(accounts), name: form.name.trim(), email: form.email.trim(), passwordHash: hashPw(form.password) };
+    setAccounts(p => [...p, newAcc]);
+    onSuccess({ name: newAcc.name, email: newAcc.email, provider: 'email' });
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="bg-[#1a1a1a] px-6 py-5 text-center">
+          <div className="text-[#b8934a] text-3xl mb-2">✝</div>
+          <h2 className="text-white font-bold text-lg">교사 로그인</h2>
+          <p className="text-white/40 text-xs mt-1">{site.churchName}</p>
+        </div>
+
+        {site.googleClientId && (
+          <div className="px-6 pt-5 pb-3">
+            <div ref={gRef} className="flex justify-center" />
+            <div className="relative mt-4 mb-1">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
+              <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">또는 이메일로</span></div>
+            </div>
+          </div>
+        )}
+
+        <div className={`flex gap-1 px-6 ${site.googleClientId ? 'pt-0' : 'pt-5'}`}>
+          {['login', 'signup'].map(t => (
+            <button key={t} onClick={() => { setTab(t); setErr(''); setForm({ name: '', email: '', password: '', password2: '' }); }}
+              className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${tab === t ? 'bg-[#1a1a1a] text-white' : 'text-gray-400 hover:text-gray-700'}`}>
+              {t === 'login' ? '로그인' : '회원가입'}
+            </button>
+          ))}
+        </div>
+
+        <div className="px-6 pb-6 pt-4 space-y-3">
+          {tab === 'signup' && (
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">이름</label>
+              <input value={form.name} onChange={e => set('name', e.target.value)}
+                placeholder="홍길동" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
+            </div>
+          )}
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">이메일</label>
+            <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
+              placeholder="example@gmail.com" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">{tab === 'signup' ? '비밀번호 (6자 이상)' : '비밀번호'}</label>
+            <input type="password" value={form.password} onChange={e => set('password', e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && tab === 'login') handleLogin(); }}
+              placeholder="••••••" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
+          </div>
+          {tab === 'signup' && (
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">비밀번호 확인</label>
+              <input type="password" value={form.password2} onChange={e => set('password2', e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSignup(); }}
+                placeholder="••••••" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
+            </div>
+          )}
+
+          {err && (
+            <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{err}</p>
+          )}
+
+          <button onClick={tab === 'login' ? handleLogin : handleSignup}
+            className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all mt-1">
+            {tab === 'login' ? '로그인' : '가입하기'}
+          </button>
+
+          <div className="relative my-1">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
+            <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">또는</span></div>
+          </div>
+
+          <button onClick={() => onSuccess({ name: '게스트', provider: 'guest' })}
+            className="w-full py-2.5 border border-gray-200 rounded-2xl text-sm text-gray-500 hover:border-[#b8934a] hover:text-[#b8934a] transition-all">
+            👤 게스트로 입장
+          </button>
+
+          <button onClick={onClose} className="w-full py-1.5 text-xs text-gray-400 hover:text-gray-600">취소</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── App Root ─────────────────────────────────────────────
+const App = () => {
+  const [site, setSite] = useLS('site_v3', DEFAULT_SITE);
+  const [sections, setSections] = useLS('sections_v3', DEFAULT_SECTIONS);
+  const [classes, setClasses] = useLS('classes_v3', DEFAULT_CLASSES);
+  const [students, setStudents] = useLS('students_v3', INITIAL_STUDENTS);
+  const [teachers, setTeachers] = useLS('teachers_v3', INITIAL_TEACHERS);
+  const [attendance, setAttendance] = useLS('attendance_v3', genAttendance(INITIAL_STUDENTS));
+  const [meetings, setMeetings] = useLS('meetings_v3', INITIAL_MEETINGS);
+  const [photos, setPhotos] = useLS('photos_v3', INITIAL_PHOTOS);
+  const [prayers, setPrayers] = useLS('prayers_v3', INITIAL_PRAYERS);
+  const [accounts, setAccounts] = useLS('accounts_v3', []);
+
+  const [authUser, setAuthUser] = useState(null);
+  const [showLogin, setShowLogin] = useState(false);
+  const [showManage, setShowManage] = useState(false);
+
+  const handleTeacherBtn = () => { if (authUser) { setShowManage(true); return; } setShowLogin(true); };
+  const handleLogout = () => {
+    setAuthUser(null); setShowManage(false);
+    if (window.google && site.googleClientId) { try { window.google.accounts.id.disableAutoSelect(); } catch(e){} }
+  };
+
+  return (
+    <React.Fragment>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'Noto Sans KR',sans-serif;color:#1a1a1a;background:#fff;}
+        h1,h2,h3{font-family:'Noto Serif KR',serif;}
+        .font-jua{font-family:'Jua',sans-serif;}
+        @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .fade-in{animation:fadeIn 0.5s ease}
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#f1f1f1}::-webkit-scrollbar-thumb{background:#b8934a;border-radius:2px}
+        .line-clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        select,input,textarea{font-family:'Noto Sans KR',sans-serif}
+      `}</style>
+
+      <Homepage
+        site={site} sections={sections} classes={classes} students={students}
+        prayers={prayers} setPrayers={setPrayers} photos={photos}
+        onOpenManage={handleTeacherBtn} authUser={authUser}
+      />
+
+      {showLogin && (
+        <AuthModal
+          site={site}
+          accounts={accounts}
+          setAccounts={setAccounts}
+          onSuccess={user => { setAuthUser(user); setShowLogin(false); setShowManage(true); }}
+          onClose={() => setShowLogin(false)}
+        />
+      )}
+
+      {showManage && authUser && (
+        <ManagePanel
+          onClose={() => setShowManage(false)}
+          authUser={authUser}
+          onLogout={handleLogout}
+          site={site} setSite={setSite}
+          sections={sections} setSections={setSections}
+          classes={classes} setClasses={setClasses}
+          students={students} setStudents={setStudents}
+          teachers={teachers} setTeachers={setTeachers}
+          attendance={attendance} setAttendance={setAttendance}
+          meetings={meetings} setMeetings={setMeetings}
+          photos={photos} setPhotos={setPhotos}
+          prayers={prayers} setPrayers={setPrayers}
+        />
+      )}
+    </React.Fragment>
+  );
+};
+
+export default App;
