@@ -201,7 +201,7 @@ const Sel=({label,value,onChange,options})=>(
 
 
 // ── 공개 홈페이지 ─────────────────────────────────────────
-const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage})=>{
+const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,authUser,onRequestDownload})=>{
   const [scrolled,setScrolled]=useState(false);
   const [activeSec,setActiveSec]=useState(null); // null = 전체
   const [mobileMenu,setMobileMenu]=useState(false);
@@ -210,7 +210,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage})=>{
 
   const downloadPhoto=p=>{
     if(!p?.src)return;
-    downloadDataUrl(p.src,`${p.album||'photo'}${p.caption?'_'+p.caption:''}.jpg`);
+    onRequestDownload(p);
   };
 
   useEffect(()=>{
@@ -489,7 +489,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage})=>{
           {lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}
           {lb.src&&(
             <button onClick={e=>{e.stopPropagation();downloadPhoto(lb);}} className="mt-4 px-5 py-2.5 bg-white text-[#1a1a1a] rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">
-              ⬇ 사진 다운로드
+              {authUser?'⬇ 사진 다운로드':'🔒 로그인 후 다운로드'}
             </button>
           )}
         </div>
@@ -1337,8 +1337,14 @@ const App = () => {
   const [authUser, setAuthUser] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showManage, setShowManage] = useState(false);
+  const [pendingDownload, setPendingDownload] = useState(null);
 
   const handleTeacherBtn = () => { if (authUser) { setShowManage(true); return; } setShowLogin(true); };
+  const handleRequestDownload = p => {
+    if (authUser) { downloadDataUrl(p.src, `${p.album || 'photo'}${p.caption ? '_' + p.caption : ''}.jpg`); return; }
+    setPendingDownload(p);
+    setShowLogin(true);
+  };
   const handleLogout = () => {
     setAuthUser(null); setShowManage(false);
     if (window.google && site.googleClientId) { try { window.google.accounts.id.disableAutoSelect(); } catch(e){} }
@@ -1363,7 +1369,7 @@ const App = () => {
       <Homepage
         site={site} sections={sections} classes={classes} students={students}
         prayers={prayers} setPrayers={setPrayers} photos={photos}
-        onOpenManage={handleTeacherBtn} authUser={authUser}
+        onOpenManage={handleTeacherBtn} authUser={authUser} onRequestDownload={handleRequestDownload}
       />
 
       {showLogin && (
@@ -1371,8 +1377,13 @@ const App = () => {
           site={site}
           accounts={accounts}
           setAccounts={setAccounts}
-          onSuccess={user => { setAuthUser(user); setShowLogin(false); setShowManage(true); logLogin({ name: user.name, email: user.email || '', provider: user.provider }); }}
-          onClose={() => setShowLogin(false)}
+          onSuccess={user => {
+            setAuthUser(user); setShowLogin(false);
+            logLogin({ name: user.name, email: user.email || '', provider: user.provider });
+            if (pendingDownload) { downloadDataUrl(pendingDownload.src, `${pendingDownload.album || 'photo'}${pendingDownload.caption ? '_' + pendingDownload.caption : ''}.jpg`); setPendingDownload(null); }
+            else { setShowManage(true); }
+          }}
+          onClose={() => { setShowLogin(false); setPendingDownload(null); }}
         />
       )}
 
