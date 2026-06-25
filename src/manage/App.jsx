@@ -17,7 +17,7 @@ const DEFAULT_CLASSES = [
   { id:'c7', name:'청년부',   sectionId:'s4' },
 ];
 const DEFAULT_HOME = {
-  churchName: '○○교회 교회학교',
+  churchName: '신천교회 교회학교',
   subtitle: '하나님의 사랑으로 함께 자라가는 교회학교',
   announcement: '',
   adminPin: '1234',
@@ -1347,7 +1347,6 @@ const AdminPage = ({ homeContent, setHomeContent, sections, setSections, classes
       {tab==='home'&&(
         <Card cls="space-y-4">
           <h2 className="font-bold text-gray-800">홈페이지 설정</h2>
-          <Inp label="교회/학교 이름" value={homeContent.churchName} onChange={v=>setHomeContent(p=>({...p,churchName:v}))}/>
           <Inp label="소개 문구" value={homeContent.subtitle} onChange={v=>setHomeContent(p=>({...p,subtitle:v}))}/>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">공지사항</label>

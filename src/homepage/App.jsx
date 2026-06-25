@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 
 // ── 데이터 ──────────────────────────────────────────────
 const DEFAULT_SITE = {
-  churchName: '○○교회 교회학교',
+  churchName: '신천교회 교회학교',
   subtitle: '하나님의 사랑 안에서 함께 자라가는 아이들',
   heroVerse: '"마땅히 행할 길을 아이에게 가르치라 그리하면 늙어도 그것을 떠나지 아니하리라"',
   heroVerseRef: '잠언 22:6',
@@ -912,7 +912,6 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
     </div>
 
     {tab==='site'&&<div className="space-y-4 bg-gray-50 rounded-2xl p-4">
-      <Inp label="교회/학교 이름" value={site.churchName} onChange={v=>setSite(p=>({...p,churchName:v}))}/>
       <Inp label="서브타이틀" value={site.subtitle} onChange={v=>setSite(p=>({...p,subtitle:v}))}/>
       <Inp label="히어로 성경 구절" value={site.heroVerse} onChange={v=>setSite(p=>({...p,heroVerse:v}))}/>
       <Inp label="성경 구절 출처" value={site.heroVerseRef} onChange={v=>setSite(p=>({...p,heroVerseRef:v}))}/>
