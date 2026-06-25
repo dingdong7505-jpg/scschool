@@ -1295,16 +1295,6 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
             {tab === 'login' ? '로그인' : '가입하기'}
           </button>
 
-          <div className="relative my-1">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
-            <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">또는</span></div>
-          </div>
-
-          <button onClick={() => onSuccess({ name: '게스트', provider: 'guest' })}
-            className="w-full py-2.5 border border-gray-200 rounded-2xl text-sm text-gray-500 hover:border-[#b8934a] hover:text-[#b8934a] transition-all">
-            👤 게스트로 입장
-          </button>
-
           <button onClick={onClose} className="w-full py-1.5 text-xs text-gray-400 hover:text-gray-600">취소</button>
         </div>
       </div>
