@@ -265,7 +265,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
           </div>
           <button onClick={onOpenManage}
             className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${scrolled?'bg-[#3d6b4f] text-white hover:bg-[#2d5240]':'bg-white/15 border border-white/30 text-white hover:bg-white/25'}`}>
-            {authUser?(authUser.role==='teacher'?'⚙️ 관리자 모드':`👋 ${authUser.name}`):'🔐 로그인'}
+            {authUser?(authUser.role==='teacher'?'⚙️ 교사 모드':`👋 ${authUser.name}`):'🔐 로그인'}
           </button>
           <button onClick={()=>setMobileMenu(v=>!v)} className={`md:hidden ${scrolled?'text-gray-700':'text-white'} text-xl`}>☰</button>
         </div>
@@ -275,7 +275,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
             {navLinks.map(l=>(
               <button key={l.href} onClick={()=>scrollTo(l.href.slice(1))} className="block w-full text-left text-gray-700 py-2 font-medium">{l.label}</button>
             ))}
-            <button onClick={onOpenManage} className="w-full py-2.5 bg-[#3d6b4f] text-white rounded-xl font-semibold">{authUser?(authUser.role==='teacher'?'⚙️ 관리자 모드':`👋 ${authUser.name}`):'🔐 로그인'}</button>
+            <button onClick={onOpenManage} className="w-full py-2.5 bg-[#3d6b4f] text-white rounded-xl font-semibold">{authUser?(authUser.role==='teacher'?'⚙️ 교사 모드':`👋 ${authUser.name}`):'🔐 로그인'}</button>
           </div>
         )}
       </nav>
@@ -506,7 +506,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={onOpenManage} className="px-5 py-2 rounded-full border border-[#b8934a] text-[#b8934a] text-sm font-medium hover:bg-[#b8934a] hover:text-white transition-all">{authUser?(authUser.role==='teacher'?'관리자 모드':authUser.name):'로그인'}</button>
+            <button onClick={onOpenManage} className="px-5 py-2 rounded-full border border-[#b8934a] text-[#b8934a] text-sm font-medium hover:bg-[#b8934a] hover:text-white transition-all">{authUser?(authUser.role==='teacher'?'교사 모드':authUser.name):'로그인'}</button>
             <p className="text-white/30 text-xs">© 2026 {site.churchName}</p>
           </div>
         </div>
