@@ -1192,6 +1192,7 @@ const PhotosPage = ({ photos, setPhotos, sections }) => {
           {lightbox.src?<img src={lightbox.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain"/>:<div className="w-64 h-64 bg-gray-800 rounded-xl flex items-center justify-center text-6xl">🖼️</div>}
           {lightbox.caption&&<p className="text-white mt-3 text-sm">{lightbox.caption}</p>}
           <p className="text-gray-400 text-xs mt-1">{lightbox.album} · {fmt(lightbox.date)}</p>
+          <button onClick={e=>{e.stopPropagation();if(confirm('이 사진을 삭제할까요?')){setPhotos(prev=>prev.filter(x=>x.id!==lightbox.id));setLightbox(null);}}} className="mt-4 px-5 py-2.5 bg-red-500 text-white rounded-full text-sm font-semibold hover:bg-red-600 transition-all">🗑 삭제</button>
         </div>
       )}
     </div>
