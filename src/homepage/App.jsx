@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { logLogin } from '../supabaseClient.js';
+import { logLogin, fetchSharedState, pushSharedState } from '../supabaseClient.js';
 
 const downloadDataUrl = async (dataUrl, filename) => {
   if (!dataUrl) return;
@@ -131,7 +131,27 @@ function genAttendance() {
 // ── 유틸 ─────────────────────────────────────────────────
 function useLS(key,init){
   const [v,setV]=useState(()=>{ try{const s=localStorage.getItem(key);return s?JSON.parse(s):(typeof init==='function'?init():init);}catch{return typeof init==='function'?init():init;} });
-  useEffect(()=>{ try{localStorage.setItem(key,JSON.stringify(v));}catch{} },[key,v]);
+  const remoteReady=useRef(false);
+
+  useEffect(()=>{
+    let alive=true;
+    fetchSharedState(key).then(remote=>{
+      if(!alive)return;
+      if(remote!==null){ setV(remote); }
+      else { pushSharedState(key,v); }
+      remoteReady.current=true;
+    });
+    return ()=>{ alive=false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[key]);
+
+  useEffect(()=>{
+    try{localStorage.setItem(key,JSON.stringify(v));}catch{}
+    if(!remoteReady.current)return;
+    const t=setTimeout(()=>pushSharedState(key,v),500);
+    return ()=>clearTimeout(t);
+  },[key,v]);
+
   return [v,setV];
 }
 const todayStr=()=>new Date().toISOString().split('T')[0];

@@ -13,3 +13,24 @@ export async function logLogin({ name, email, provider }) {
     console.warn('login log failed', e);
   }
 }
+
+export async function fetchSharedState(key) {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.from('app_state').select('value').eq('key', key).maybeSingle();
+    if (error) { console.warn('fetchSharedState failed', key, error); return null; }
+    return data ? data.value : null;
+  } catch (e) {
+    console.warn('fetchSharedState failed', key, e);
+    return null;
+  }
+}
+
+export async function pushSharedState(key, value) {
+  if (!supabase) return;
+  try {
+    await supabase.from('app_state').upsert({ key, value, updated_at: new Date().toISOString() });
+  } catch (e) {
+    console.warn('pushSharedState failed', key, e);
+  }
+}

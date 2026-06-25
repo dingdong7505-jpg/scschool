@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { logLogin } from '../supabaseClient.js';
+import { logLogin, fetchSharedState, pushSharedState } from '../supabaseClient.js';
 
 // ── 기본 데이터 ──────────────────────────────────────────
 const DEFAULT_SECTIONS = [
@@ -93,13 +93,43 @@ function generateSampleAttendance(classes) {
   return records;
 }
 
-// ── localStorage 훅 ──────────────────────────────────────
+// ── localStorage 훅 (기기 전용 — 세션 등) ──────────────────
 function useLS(key, init) {
   const [val, setVal] = useState(() => {
     try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : (typeof init==='function'?init():init); }
     catch { return typeof init==='function'?init():init; }
   });
   useEffect(() => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }, [key, val]);
+  return [val, setVal];
+}
+
+// ── Supabase로 동기화되는 공유 데이터 훅 ────────────────────
+function useSharedLS(key, init) {
+  const [val, setVal] = useState(() => {
+    try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : (typeof init==='function'?init():init); }
+    catch { return typeof init==='function'?init():init; }
+  });
+  const remoteReady = useRef(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetchSharedState(key).then(remote => {
+      if (!alive) return;
+      if (remote !== null) { setVal(remote); }
+      else { pushSharedState(key, val); }
+      remoteReady.current = true;
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  useEffect(() => {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+    if (!remoteReady.current) return;
+    const t = setTimeout(() => pushSharedState(key, val), 500);
+    return () => clearTimeout(t);
+  }, [key, val]);
+
   return [val, setVal];
 }
 
@@ -1587,15 +1617,15 @@ const App = () => {
   const [activeSectionId, setActiveSectionId] = useState(null);
   const [authUser, setAuthUser] = useLS('ch_auth_user', null);
 
-  const [homeContent, setHomeContent] = useLS('ch_home', DEFAULT_HOME);
-  const [sections,    setSections]    = useLS('ch_sections',  DEFAULT_SECTIONS);
-  const [classes,     setClasses]     = useLS('ch_classes',   DEFAULT_CLASSES);
-  const [students,    setStudents]    = useLS('ch_students',  INITIAL_STUDENTS);
-  const [teachers,    setTeachers]    = useLS('ch_teachers',  INITIAL_TEACHERS);
-  const [attendance,  setAttendance]  = useLS('ch_attendance', ()=>generateSampleAttendance(DEFAULT_CLASSES));
-  const [meetings,    setMeetings]    = useLS('ch_meetings',  INITIAL_MEETINGS);
-  const [photos,      setPhotos]      = useLS('ch_photos',    INITIAL_PHOTOS);
-  const [prayers,     setPrayers]     = useLS('ch_prayers',   INITIAL_PRAYERS);
+  const [homeContent, setHomeContent] = useSharedLS('ch_home', DEFAULT_HOME);
+  const [sections,    setSections]    = useSharedLS('ch_sections',  DEFAULT_SECTIONS);
+  const [classes,     setClasses]     = useSharedLS('ch_classes',   DEFAULT_CLASSES);
+  const [students,    setStudents]    = useSharedLS('ch_students',  INITIAL_STUDENTS);
+  const [teachers,    setTeachers]    = useSharedLS('ch_teachers',  INITIAL_TEACHERS);
+  const [attendance,  setAttendance]  = useSharedLS('ch_attendance', ()=>generateSampleAttendance(DEFAULT_CLASSES));
+  const [meetings,    setMeetings]    = useSharedLS('ch_meetings',  INITIAL_MEETINGS);
+  const [photos,      setPhotos]      = useSharedLS('ch_photos',    INITIAL_PHOTOS);
+  const [prayers,     setPrayers]     = useSharedLS('ch_prayers',   INITIAL_PRAYERS);
 
   const nav = p => { setPage(p); window.scrollTo({top:0,behavior:'smooth'}); };
   const selectSection = id => { setActiveSectionId(id); setPage('section'); window.scrollTo({top:0,behavior:'smooth'}); };
