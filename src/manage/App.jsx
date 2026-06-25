@@ -144,7 +144,22 @@ function getDaysUntilBirthday(bd) {
   const diff = Math.ceil((next-now)/86400000);
   return diff===365?0:diff;
 }
-const isThisWeek = bd => { const d=getDaysUntilBirthday(bd); return d!==null&&d<=7; };
+const getWeekRange = () => { const today = new Date(); today.setHours(0,0,0,0); const sun = new Date(today); sun.setDate(today.getDate()-today.getDay()); const sat = new Date(sun); sat.setDate(sun.getDate()+6); return {sun,sat}; };
+const isThisWeek = bd => {
+  if (!bd) return false;
+  const {sun,sat} = getWeekRange();
+  const [,m,day] = bd.split('-').map(Number);
+  return [sun.getFullYear(),sat.getFullYear()].some(y=>{ const c=new Date(y,m-1,day); return c>=sun&&c<=sat; });
+};
+const getWeekDiff = bd => {
+  if (!bd) return null;
+  const {sun,sat} = getWeekRange();
+  const [,m,day] = bd.split('-').map(Number);
+  const today = new Date(); today.setHours(0,0,0,0);
+  for (const y of [sun.getFullYear(),sat.getFullYear()]) { const c=new Date(y,m-1,day); if (c>=sun&&c<=sat) return Math.round((c-today)/86400000); }
+  return null;
+};
+const fmtWeekDiff = d => d===0?'오늘!🥳':d>0?`D-${d}`:`${-d}일 전`;
 const isThisMonth = bd => { if (!bd) return false; return parseInt(bd.split('-')[1])===new Date().getMonth()+1; };
 const getAge = bd => { if (!bd) return ''; return new Date().getFullYear()-parseInt(bd.split('-')[0])+'세'; };
 const getBirthMMDD = bd => { if (!bd) return ''; const [,m,d]=bd.split('-'); return `${m}월 ${d}일`; };
@@ -426,7 +441,7 @@ const SectionPage = ({ section, classes, students, attendance, teachers, photos,
             {weekBdays.map(s=>(
               <div key={s.id} className="flex items-center gap-2 bg-pink-50 rounded-xl px-3 py-2">
                 <span className="font-medium text-sm">{s.name}</span>
-                <span className="text-xs text-pink-500">{getDaysUntilBirthday(s.birthDate)===0?'오늘!':'D-'+getDaysUntilBirthday(s.birthDate)}</span>
+                <span className="text-xs text-pink-500">{fmtWeekDiff(getWeekDiff(s.birthDate))}</span>
               </div>
             ))}
           </div>
@@ -475,7 +490,7 @@ const Dashboard = ({ homeContent, sections, classes, students, attendance, meeti
   const active = students.filter(s=>s.active);
   const todayRecs = attendance[todayStr()]||{};
   const todayPresent = Object.values(todayRecs).filter(s=>s==='출석').length;
-  const weekBdays = active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getDaysUntilBirthday(a.birthDate)-getDaysUntilBirthday(b.birthDate));
+  const weekBdays = active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const recentMeetings = [...meetings].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
   const catCol = {'회의록':'purple','공지':'orange','교육자료':'green'};
   const secGrad = { rose:'from-rose-400 to-pink-500', amber:'from-amber-400 to-orange-500', sky:'from-sky-400 to-blue-500', violet:'from-violet-400 to-purple-500' };
@@ -533,7 +548,7 @@ const Dashboard = ({ homeContent, sections, classes, students, attendance, meeti
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-pink-600 font-medium">{getBirthMMDD(s.birthDate)}</p>
-                  <p className="text-xs text-gray-400">{getDaysUntilBirthday(s.birthDate)===0?'오늘!🥳':`D-${getDaysUntilBirthday(s.birthDate)}`}</p>
+                  <p className="text-xs text-gray-400">{fmtWeekDiff(getWeekDiff(s.birthDate))}</p>
                 </div>
               </div>
             ))}
@@ -888,7 +903,7 @@ const StatsPage = ({ students, classes, sections, attendance }) => {
 const BirthdayPage = ({ students, classes }) => {
   const active = students.filter(s=>s.active&&s.birthDate);
   const getClassName = id => classes.find(c=>c.id===id)?.name||'';
-  const thisWeek = active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getDaysUntilBirthday(a.birthDate)-getDaysUntilBirthday(b.birthDate));
+  const thisWeek = active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const thisMonth = active.filter(s=>isThisMonth(s.birthDate)&&!isThisWeek(s.birthDate)).sort((a,b)=>a.birthDate.slice(5).localeCompare(b.birthDate.slice(5)));
   const byMonth = Array.from({length:12},(_,i)=>({
     month:i+1, students:active.filter(s=>parseInt(s.birthDate.split('-')[1])===i+1).sort((a,b)=>parseInt(a.birthDate.split('-')[2])-parseInt(b.birthDate.split('-')[2]))
@@ -909,8 +924,8 @@ const BirthdayPage = ({ students, classes }) => {
                     <p className="text-sm text-gray-500">{getClassName(s.classId)} · {s.grade}</p>
                     <p className="text-sm text-pink-500 font-medium">{getBirthMMDD(s.birthDate)} · {getAge(s.birthDate)}</p>
                   </div>
-                  <div className={`text-2xl font-bold ${getDaysUntilBirthday(s.birthDate)===0?'text-pink-500':'text-gray-600'}`}>
-                    {getDaysUntilBirthday(s.birthDate)===0?'오늘!🥳':`D-${getDaysUntilBirthday(s.birthDate)}`}
+                  <div className={`text-2xl font-bold ${getWeekDiff(s.birthDate)===0?'text-pink-500':'text-gray-600'}`}>
+                    {fmtWeekDiff(getWeekDiff(s.birthDate))}
                   </div>
                 </div>
               </Card>

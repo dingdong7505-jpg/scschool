@@ -157,11 +157,26 @@ function useLS(key,init){
 const todayStr=()=>new Date().toISOString().split('T')[0];
 const fmt=d=>d?d.replace(/-/g,'.'):''  ;
 function getDUB(bd){ if(!bd)return null; const now=new Date(),[,m,day]=bd.split('-').map(Number),next=new Date(now.getFullYear(),m-1,day); if(next<now)next.setFullYear(now.getFullYear()+1); const diff=Math.ceil((next-now)/86400000); return diff===365?0:diff; }
-const isThisWeek=bd=>{ const d=getDUB(bd);return d!==null&&d<=7; };
+const getWeekRange=()=>{ const today=new Date(); today.setHours(0,0,0,0); const sun=new Date(today); sun.setDate(today.getDate()-today.getDay()); const sat=new Date(sun); sat.setDate(sun.getDate()+6); return {sun,sat}; };
+const isThisWeek=bd=>{
+  if(!bd)return false;
+  const {sun,sat}=getWeekRange();
+  const [,m,day]=bd.split('-').map(Number);
+  return [sun.getFullYear(),sat.getFullYear()].some(y=>{ const c=new Date(y,m-1,day); return c>=sun&&c<=sat; });
+};
+const getWeekDiff=bd=>{
+  if(!bd)return null;
+  const {sun,sat}=getWeekRange();
+  const [,m,day]=bd.split('-').map(Number);
+  const today=new Date(); today.setHours(0,0,0,0);
+  for(const y of [sun.getFullYear(),sat.getFullYear()]){ const c=new Date(y,m-1,day); if(c>=sun&&c<=sat) return Math.round((c-today)/86400000); }
+  return null;
+};
 const isThisMonth=bd=>{ if(!bd)return false;return parseInt(bd.split('-')[1])===new Date().getMonth()+1; };
 const getAge=bd=>{ if(!bd)return '';return new Date().getFullYear()-parseInt(bd.split('-')[0])+'세'; };
 const getBMMDD=bd=>{ if(!bd)return '';const[,m,d]=bd.split('-');return `${m}월 ${d}일`; };
 const nextId=arr=>arr.length?Math.max(...arr.map(x=>x.id))+1:1;
+const fmtWeekDiff=d=>d===0?'오늘!🥳':d>0?`D-${d}`:`${-d}일 전`;
 const decodeJWT=token=>{ try{const b=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(b));}catch{return null;} };
 
 // ── 공통 컴포넌트 ─────────────────────────────────────────
@@ -220,7 +235,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
   },[]);
 
   const active=students.filter(s=>s.active);
-  const weekBdays=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getDUB(a.birthDate)-getDUB(b.birthDate));
+  const weekBdays=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const EMOJIS=['🌸','🌿','⛅','🌟','🙏','❤️','✝️','🎉','📖','🕊️'];
 
   // 섹션별 색상 테마
@@ -423,7 +438,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
                         <p className="text-sm text-gray-500">{cls?.name} · {getBMMDD(s.birthDate)}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-[#b8934a]">{getDUB(s.birthDate)===0?'🥳오늘!':`D-${getDUB(s.birthDate)}`}</p>
+                        <p className="text-lg font-bold text-[#b8934a]">{fmtWeekDiff(getWeekDiff(s.birthDate))}</p>
                       </div>
                     </div>
                   );
@@ -629,7 +644,7 @@ const MPDashboard=({students,classes,sections,attendance,meetings,nav})=>{
   const active=students.filter(s=>s.active);
   const todayRecs=attendance[todayStr()]||{};
   const todayPresent=Object.values(todayRecs).filter(s=>s==='출석').length;
-  const weekBdays=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getDUB(a.birthDate)-getDUB(b.birthDate));
+  const weekBdays=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const recent=[...meetings].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
 
   const secRates=sections.map(sec=>{
@@ -677,7 +692,7 @@ const MPDashboard=({students,classes,sections,attendance,meetings,nav})=>{
               return <div key={s.id} className="flex items-center gap-3 bg-pink-50 rounded-xl p-3">
                 <div className="w-8 h-8 rounded-full bg-pink-200 flex items-center justify-center font-bold text-pink-700 text-sm">{s.name[0]}</div>
                 <div className="flex-1"><p className="font-medium text-sm">{s.name}</p><p className="text-xs text-gray-400">{cls?.name}</p></div>
-                <span className="text-sm font-bold text-pink-600">{getDUB(s.birthDate)===0?'오늘!🥳':`D-${getDUB(s.birthDate)}`}</span>
+                <span className="text-sm font-bold text-pink-600">{fmtWeekDiff(getWeekDiff(s.birthDate))}</span>
               </div>;
             })}
           </div>
@@ -897,12 +912,12 @@ const MPStats=({students,classes,sections,attendance})=>{
 const MPBirthday=({students,classes})=>{
   const active=students.filter(s=>s.active&&s.birthDate);
   const getCls=id=>classes.find(c=>c.id===id)?.name||'';
-  const thisWeek=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getDUB(a.birthDate)-getDUB(b.birthDate));
+  const thisWeek=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const thisMonth=active.filter(s=>isThisMonth(s.birthDate)&&!isThisWeek(s.birthDate));
   const byMonth=Array.from({length:12},(_,i)=>({month:i+1,ss:active.filter(s=>parseInt(s.birthDate.split('-')[1])===i+1)})).filter(m=>m.ss.length);
   return <div className="space-y-4">
     <h2 className="font-bold text-gray-900 text-lg">🎂 생일</h2>
-    {thisWeek.length>0&&<div><h3 className="text-sm font-semibold text-gray-700 mb-2">🎉 이번 주</h3><div className="space-y-2">{thisWeek.map(s=><div key={s.id} className="flex items-center gap-3 bg-pink-50 rounded-xl p-3 border border-pink-100"><div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center font-bold">{s.name[0]}</div><div className="flex-1"><p className="font-bold text-sm">{s.name} 🎂</p><p className="text-xs text-gray-500">{getCls(s.classId)} · {getBMMDD(s.birthDate)}</p></div><p className="font-bold text-pink-600">{getDUB(s.birthDate)===0?'오늘!🥳':`D-${getDUB(s.birthDate)}`}</p></div>)}</div></div>}
+    {thisWeek.length>0&&<div><h3 className="text-sm font-semibold text-gray-700 mb-2">🎉 이번 주</h3><div className="space-y-2">{thisWeek.map(s=><div key={s.id} className="flex items-center gap-3 bg-pink-50 rounded-xl p-3 border border-pink-100"><div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center font-bold">{s.name[0]}</div><div className="flex-1"><p className="font-bold text-sm">{s.name} 🎂</p><p className="text-xs text-gray-500">{getCls(s.classId)} · {getBMMDD(s.birthDate)}</p></div><p className="font-bold text-pink-600">{fmtWeekDiff(getWeekDiff(s.birthDate))}</p></div>)}</div></div>}
     {thisMonth.length>0&&<div><h3 className="text-sm font-semibold text-gray-700 mb-2">📅 이번 달</h3><div className="space-y-2">{thisMonth.map(s=><div key={s.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3"><div className="w-8 h-8 rounded-lg bg-[#b8934a] text-white flex items-center justify-center font-bold text-sm">{s.name[0]}</div><div className="flex-1 text-sm"><span className="font-medium">{s.name}</span><span className="text-gray-400 ml-2">{getCls(s.classId)} · {getBMMDD(s.birthDate)}</span></div><span className="text-sm font-medium text-[#b8934a]">D-{getDUB(s.birthDate)}</span></div>)}</div></div>}
     <div><h3 className="text-sm font-semibold text-gray-700 mb-2">📆 월별</h3><div className="space-y-3">{byMonth.map(({month,ss})=><div key={month}><div className="flex items-center gap-2 mb-1"><div className="w-7 h-7 rounded-lg bg-[#1a1a1a] text-white text-xs font-bold flex items-center justify-center">{month}</div><span className="text-xs text-gray-500">{ss.length}명</span></div><div className="pl-9 space-y-1">{ss.map(s=><div key={s.id} className="flex items-center gap-2 text-xs py-1 border-b border-gray-50"><span className="font-medium text-gray-700">{s.name}</span><span className="text-gray-400">{getCls(s.classId)}</span><span className="ml-auto text-gray-500">{getBMMDD(s.birthDate)}</span></div>)}</div></div>)}</div></div>
   </div>;
