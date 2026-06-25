@@ -304,7 +304,6 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage})=>{
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button onClick={()=>scrollTo('sections')} className="px-8 py-3.5 rounded-full font-semibold text-sm bg-white text-gray-900 hover:bg-white/90 transition-all shadow-xl">부서 안내 보기</button>
-            <button onClick={onOpenManage} className="px-8 py-3.5 rounded-full font-semibold text-sm transition-all" style={{color:heroTc,background:'rgba(0,0,0,0.25)',border:'2px solid rgba(255,255,255,0.6)',backdropFilter:'blur(4px)'}}>🔐 교사 로그인</button>
           </div>
           {site.announcement&&(
             <div className="mt-8 inline-block bg-white/15 border border-white/30 rounded-2xl px-5 py-3 text-sm text-white backdrop-blur-sm">
