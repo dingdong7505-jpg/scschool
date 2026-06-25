@@ -1375,8 +1375,14 @@ const App = () => {
 
   const handleTeacherBtn = () => {
     if (authUser?.role === 'teacher') { setShowManage(true); return; }
-    if (authUser?.role === 'teacher_pending') { alert('교사 가입 신청이 관리자 승인 대기 중입니다.'); return; }
-    if (authUser) { return; }
+    if (authUser?.role === 'teacher_pending') {
+      if (confirm(`${authUser.name}님, 교사 가입 신청이 관리자 승인 대기 중입니다.\n로그아웃하시겠어요?`)) handleLogout();
+      return;
+    }
+    if (authUser) {
+      if (confirm(`${authUser.name}님으로 로그인되어 있습니다.\n로그아웃하시겠어요?`)) handleLogout();
+      return;
+    }
     setShowLogin(true);
   };
   const handleRequestDownload = p => {
