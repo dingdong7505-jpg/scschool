@@ -2,6 +2,28 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { logLogin } from '../supabaseClient.js';
 
+const downloadDataUrl = async (dataUrl, filename) => {
+  if (!dataUrl) return;
+  try {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.warn('download failed', e);
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = filename;
+    a.click();
+  }
+};
+
 const exportXLSX = (rows, filename, sheetName = 'Sheet1') => {
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
@@ -168,10 +190,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage})=>{
 
   const downloadPhoto=p=>{
     if(!p?.src)return;
-    const a=document.createElement('a');
-    a.href=p.src;
-    a.download=`${p.album||'photo'}${p.caption?'_'+p.caption:''}.jpg`;
-    a.click();
+    downloadDataUrl(p.src,`${p.album||'photo'}${p.caption?'_'+p.caption:''}.jpg`);
   };
 
   useEffect(()=>{
@@ -924,7 +943,7 @@ const MPPhotos=({photos,setPhotos,sections})=>{
     {Object.entries(byAlbum).map(([album,ps])=><div key={album}><p className="text-sm font-semibold text-gray-700 mb-2">{album} <span className="text-gray-400 font-normal">({ps.length}장)</span></p><div className="grid grid-cols-3 gap-2">{ps.map((p,i)=><div key={p.id} onClick={()=>setLb(p)} className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">{p.src?<img src={p.src} alt="" className="w-full h-full object-cover"/>:<span className="text-3xl">{EMOJIS[i%EMOJIS.length]}</span>}</div>)}</div></div>)}
     {!filtered.length&&<p className="text-center text-gray-400 py-8 text-sm">사진 없음</p>}
     {showAdd&&<Modal title="사진 추가" onClose={()=>setShowAdd(false)}><AddForm onSave={p=>setPhotos(pv=>[...pv,{...p,id:nextId(pv)}])} onClose={()=>setShowAdd(false)}/></Modal>}
-    {lb&&<div className="fixed inset-0 bg-black/80 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setLb(null)}><button className="absolute top-4 right-4 text-white text-2xl">✕</button>{lb.src?<img src={lb.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain" onClick={e=>e.stopPropagation()}/>:<div className="w-48 h-48 bg-gray-800 rounded-xl flex items-center justify-center text-5xl">🖼️</div>}{lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}{lb.src&&<button onClick={e=>{e.stopPropagation();const a=document.createElement('a');a.href=lb.src;a.download=`${lb.album||'photo'}.jpg`;a.click();}} className="mt-4 px-5 py-2.5 bg-white text-[#1a1a1a] rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">⬇ 사진 다운로드</button>}</div>}
+    {lb&&<div className="fixed inset-0 bg-black/80 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setLb(null)}><button className="absolute top-4 right-4 text-white text-2xl">✕</button>{lb.src?<img src={lb.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain" onClick={e=>e.stopPropagation()}/>:<div className="w-48 h-48 bg-gray-800 rounded-xl flex items-center justify-center text-5xl">🖼️</div>}{lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}{lb.src&&<button onClick={e=>{e.stopPropagation();downloadDataUrl(lb.src,`${lb.album||'photo'}.jpg`);}} className="mt-4 px-5 py-2.5 bg-white text-[#1a1a1a] rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">⬇ 사진 다운로드</button>}</div>}
   </div>;
 };
 
