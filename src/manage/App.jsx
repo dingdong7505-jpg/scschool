@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { logLogin } from '../supabaseClient.js';
 
 // ── 기본 데이터 ──────────────────────────────────────────
 const DEFAULT_SECTIONS = [
@@ -1611,7 +1612,7 @@ const App = () => {
     return (
       <>
         <script src="https://accounts.google.com/gsi/client" async defer/>
-        <LoginPage homeContent={homeContent} onLogin={user=>setAuthUser(user)}/>
+        <LoginPage homeContent={homeContent} onLogin={user=>{ setAuthUser(user); logLogin({ name: user.name, email: user.email || '', provider: user.sub==='guest'?'guest':'google' }); }}/>
       </>
     );
   }

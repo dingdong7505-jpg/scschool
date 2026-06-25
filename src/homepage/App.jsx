@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { logLogin } from '../supabaseClient.js';
 
 // ── 데이터 ──────────────────────────────────────────────
 const DEFAULT_SITE = {
@@ -1286,7 +1287,7 @@ const App = () => {
           site={site}
           accounts={accounts}
           setAccounts={setAccounts}
-          onSuccess={user => { setAuthUser(user); setShowLogin(false); setShowManage(true); }}
+          onSuccess={user => { setAuthUser(user); setShowLogin(false); setShowManage(true); logLogin({ name: user.name, email: user.email || '', provider: user.provider }); }}
           onClose={() => setShowLogin(false)}
         />
       )}
