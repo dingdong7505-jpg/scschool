@@ -259,8 +259,6 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
   const visiblePhotos = photos.filter(p=>p.visibility!=='member'||authUser);
   const filteredPhotos = activeSec ? visiblePhotos.filter(p=>p.sectionId===activeSec||p.sectionId==='all') : visiblePhotos;
   const byAlbum={}; filteredPhotos.forEach(p=>{ if(!byAlbum[p.album])byAlbum[p.album]=[]; byAlbum[p.album].push(p); });
-  const allInSection = activeSec ? photos.filter(p=>p.sectionId===activeSec||p.sectionId==='all') : photos;
-  const hasMemberOnlyHidden = !authUser && filteredPhotos.length===0 && allInSection.length>0;
 
   const heroTc = site.heroTextColor || '#ffffff';
   const heroOv = (site.heroOverlay != null ? site.heroOverlay : 30) / 100;
@@ -496,8 +494,8 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
               </div>
             ))}
           </div>
-          {filteredPhotos.length===0&&!hasMemberOnlyHidden&&<p className="text-center text-gray-400 py-12">사진이 없습니다.</p>}
-          {hasMemberOnlyHidden&&(
+          {filteredPhotos.length===0&&authUser&&<p className="text-center text-gray-400 py-12">사진이 없습니다.</p>}
+          {!authUser&&(
             <div className="text-center py-12">
               <p className="text-gray-400 mb-3">🔒 로그인 후 볼 수 있는 사진이 있습니다.</p>
               <button onClick={onRequestLogin} className="px-5 py-2.5 bg-[#1a1a1a] text-white rounded-full text-sm font-semibold hover:bg-[#333] transition-all">로그인 / 회원가입</button>
