@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { logLogin } from '../supabaseClient.js';
+
+const exportXLSX = (rows, filename, sheetName = 'Sheet1') => {
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, filename);
+};
 
 // ── 데이터 ──────────────────────────────────────────────
 const DEFAULT_SITE = {
@@ -156,6 +164,15 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage})=>{
   const [activeSec,setActiveSec]=useState(null); // null = 전체
   const [mobileMenu,setMobileMenu]=useState(false);
   const [showPrayerForm,setShowPrayerForm]=useState(false);
+  const [lb,setLb]=useState(null);
+
+  const downloadPhoto=p=>{
+    if(!p?.src)return;
+    const a=document.createElement('a');
+    a.href=p.src;
+    a.download=`${p.album||'photo'}${p.caption?'_'+p.caption:''}.jpg`;
+    a.click();
+  };
 
   useEffect(()=>{
     const fn=()=>setScrolled(window.scrollY>60);
@@ -412,19 +429,33 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage})=>{
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredPhotos.map((p,i)=>(
-              <div key={p.id} className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group cursor-pointer hover:shadow-lg transition-all">
+              <div key={p.id} onClick={()=>setLb(p)} className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group cursor-pointer hover:shadow-lg transition-all relative">
                 {p.src?<img src={p.src} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>:(
                   <div className="text-center">
                     <div className="text-4xl mb-1">{EMOJIS[i%EMOJIS.length]}</div>
                     <p className="text-xs text-gray-500 px-2">{p.caption}</p>
                   </div>
                 )}
+                {p.src&&<div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-end justify-end p-2 opacity-0 group-hover:opacity-100"><span className="text-white text-xs bg-black/50 rounded-full px-2 py-1">⬇ 크게보기</span></div>}
               </div>
             ))}
           </div>
           {filteredPhotos.length===0&&<p className="text-center text-gray-400 py-12">사진이 없습니다.</p>}
         </div>
       </section>
+
+      {lb&&(
+        <div className="fixed inset-0 bg-black/85 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setLb(null)}>
+          <button className="absolute top-4 right-4 text-white text-2xl" onClick={()=>setLb(null)}>✕</button>
+          {lb.src?<img src={lb.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain" onClick={e=>e.stopPropagation()}/>:<div className="w-48 h-48 bg-gray-800 rounded-xl flex items-center justify-center text-5xl">🖼️</div>}
+          {lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}
+          {lb.src&&(
+            <button onClick={e=>{e.stopPropagation();downloadPhoto(lb);}} className="mt-4 px-5 py-2.5 bg-white text-[#1a1a1a] rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">
+              ⬇ 사진 다운로드
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── 푸터 ── */}
       <footer className="py-12" style={{background:'#1a1a1a'}}>
@@ -631,9 +662,24 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
   const cls=classes.find(c=>c.id===selCls);
   const sec=sections.find(s=>s.id===cls?.sectionId);
 
+  const exportAttendance=()=>{
+    const rows=[];
+    Object.entries(attendance).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([date,recs])=>{
+      Object.entries(recs).forEach(([sid,status])=>{
+        const st=students.find(s=>s.id===Number(sid)||s.id===sid);
+        if(!st)return;
+        const c=classes.find(c=>c.id===st.classId);
+        const sc=sections.find(se=>se.id===c?.sectionId);
+        rows.push({날짜:date,부서:sc?.name||'',반:c?.name||'',이름:st.name,상태:status});
+      });
+    });
+    if(!rows.length)return alert('내보낼 출석 기록이 없습니다.');
+    exportXLSX(rows,`출석체크_${todayStr()}.xlsx`,'출석체크');
+  };
+
   return (
     <div className="space-y-4">
-      <h2 className="font-bold text-gray-900 text-lg">출석체크</h2>
+      <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">출석체크</h2><button onClick={exportAttendance} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-xl text-xs font-medium hover:bg-[#2d5240]">⬇ 엑셀 다운로드</button></div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-medium text-gray-600 block mb-1">날짜</label>
@@ -730,8 +776,18 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
     return g;
   },[filtered,classes]);
 
+  const exportStudents=()=>{
+    if(!students.length)return alert('내보낼 학생이 없습니다.');
+    const rows=students.map(s=>{
+      const c=classes.find(c=>c.id===s.classId);
+      const sc=sections.find(se=>se.id===c?.sectionId);
+      return {이름:s.name,부서:sc?.name||'',반:c?.name||'',학년:s.grade||'',생년월일:s.birthDate||'',학생연락처:s.phone||'',부모님연락처:s.parentPhone||'',등록일:s.registeredDate||'',재적여부:s.active?'재적':'제적',메모:s.memo||''};
+    });
+    exportXLSX(rows,`교적부_${todayStr()}.xlsx`,'교적부');
+  };
+
   return <div className="space-y-4">
-    <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">교적부</h2><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333]">+ 학생 추가</button></div>
+    <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">교적부</h2><div className="flex gap-2"><button onClick={exportStudents} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-xl text-sm font-medium hover:bg-[#2d5240]">⬇ 엑셀 다운로드</button><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333]">+ 학생 추가</button></div></div>
     <div className="flex gap-2 overflow-x-auto pb-1">
       {['전체',...sections.map(s=>s.name)].map(n=><button key={n} onClick={()=>setFSec(n)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${fSec===n?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{n}</button>)}
     </div>
@@ -868,7 +924,7 @@ const MPPhotos=({photos,setPhotos,sections})=>{
     {Object.entries(byAlbum).map(([album,ps])=><div key={album}><p className="text-sm font-semibold text-gray-700 mb-2">{album} <span className="text-gray-400 font-normal">({ps.length}장)</span></p><div className="grid grid-cols-3 gap-2">{ps.map((p,i)=><div key={p.id} onClick={()=>setLb(p)} className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity">{p.src?<img src={p.src} alt="" className="w-full h-full object-cover"/>:<span className="text-3xl">{EMOJIS[i%EMOJIS.length]}</span>}</div>)}</div></div>)}
     {!filtered.length&&<p className="text-center text-gray-400 py-8 text-sm">사진 없음</p>}
     {showAdd&&<Modal title="사진 추가" onClose={()=>setShowAdd(false)}><AddForm onSave={p=>setPhotos(pv=>[...pv,{...p,id:nextId(pv)}])} onClose={()=>setShowAdd(false)}/></Modal>}
-    {lb&&<div className="fixed inset-0 bg-black/80 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setLb(null)}><button className="absolute top-4 right-4 text-white text-2xl">✕</button>{lb.src?<img src={lb.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain"/>:<div className="w-48 h-48 bg-gray-800 rounded-xl flex items-center justify-center text-5xl">🖼️</div>}{lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}</div>}
+    {lb&&<div className="fixed inset-0 bg-black/80 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setLb(null)}><button className="absolute top-4 right-4 text-white text-2xl">✕</button>{lb.src?<img src={lb.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain" onClick={e=>e.stopPropagation()}/>:<div className="w-48 h-48 bg-gray-800 rounded-xl flex items-center justify-center text-5xl">🖼️</div>}{lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}{lb.src&&<button onClick={e=>{e.stopPropagation();const a=document.createElement('a');a.href=lb.src;a.download=`${lb.album||'photo'}.jpg`;a.click();}} className="mt-4 px-5 py-2.5 bg-white text-[#1a1a1a] rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">⬇ 사진 다운로드</button>}</div>}
   </div>;
 };
 
