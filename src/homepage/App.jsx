@@ -265,7 +265,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
           </div>
           <button onClick={onOpenManage}
             className={`hidden md:flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all ${scrolled?'bg-[#3d6b4f] text-white hover:bg-[#2d5240]':'bg-white/15 border border-white/30 text-white hover:bg-white/25'}`}>
-            🔐 교사 로그인
+            {authUser?(authUser.role==='teacher'?'⚙️ 관리자 모드':`👋 ${authUser.name}`):'🔐 로그인'}
           </button>
           <button onClick={()=>setMobileMenu(v=>!v)} className={`md:hidden ${scrolled?'text-gray-700':'text-white'} text-xl`}>☰</button>
         </div>
@@ -275,7 +275,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
             {navLinks.map(l=>(
               <button key={l.href} onClick={()=>scrollTo(l.href.slice(1))} className="block w-full text-left text-gray-700 py-2 font-medium">{l.label}</button>
             ))}
-            <button onClick={onOpenManage} className="w-full py-2.5 bg-[#3d6b4f] text-white rounded-xl font-semibold">🔐 교사 로그인</button>
+            <button onClick={onOpenManage} className="w-full py-2.5 bg-[#3d6b4f] text-white rounded-xl font-semibold">{authUser?(authUser.role==='teacher'?'⚙️ 관리자 모드':`👋 ${authUser.name}`):'🔐 로그인'}</button>
           </div>
         )}
       </nav>
@@ -506,7 +506,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={onOpenManage} className="px-5 py-2 rounded-full border border-[#b8934a] text-[#b8934a] text-sm font-medium hover:bg-[#b8934a] hover:text-white transition-all">교사 로그인</button>
+            <button onClick={onOpenManage} className="px-5 py-2 rounded-full border border-[#b8934a] text-[#b8934a] text-sm font-medium hover:bg-[#b8934a] hover:text-white transition-all">{authUser?(authUser.role==='teacher'?'관리자 모드':authUser.name):'로그인'}</button>
             <p className="text-white/30 text-xs">© 2026 {site.churchName}</p>
           </div>
         </div>
@@ -542,7 +542,7 @@ const PrayerFormModal=({onClose})=>{
 };
 
 // ── 교사 관리 패널 (슬라이드 드로어) ─────────────────────
-const ManagePanel=({onClose,authUser,onLogout,site,setSite,sections,setSections,classes,setClasses,students,setStudents,teachers,setTeachers,attendance,setAttendance,meetings,setMeetings,photos,setPhotos,prayers,setPrayers})=>{
+const ManagePanel=({onClose,authUser,onLogout,site,setSite,sections,setSections,classes,setClasses,students,setStudents,teachers,setTeachers,attendance,setAttendance,meetings,setMeetings,photos,setPhotos,prayers,setPrayers,accounts,setAccounts})=>{
   const [page,setPage]=useState('dashboard');
   const [selSec,setSelSec]=useState(null); // 섹션 필터
 
@@ -609,7 +609,7 @@ const ManagePanel=({onClose,authUser,onLogout,site,setSite,sections,setSections,
             {page==='meetings'&&<MPMeetings meetings={meetings} setMeetings={setMeetings}/>}
             {page==='photos'&&<MPPhotos photos={photos} setPhotos={setPhotos} sections={sections}/>}
             {page==='prayers'&&<MPPrayers prayers={prayers} setPrayers={setPrayers}/>}
-            {page==='admin'&&<MPAdmin site={site} setSite={setSite} sections={sections} setSections={setSections} classes={classes} setClasses={setClasses} teachers={teachers} students={students}/>}
+            {page==='admin'&&<MPAdmin site={site} setSite={setSite} sections={sections} setSections={setSections} classes={classes} setClasses={setClasses} teachers={teachers} students={students} accounts={accounts} setAccounts={setAccounts}/>}
           </div>
         </div>
       </div>
@@ -986,7 +986,7 @@ const MPPrayers=({prayers,setPrayers})=>{
   </div>;
 };
 
-const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,students})=>{
+const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,students,accounts,setAccounts})=>{
   const [tab,setTab]=useState('site');
   const [authed,setAuthed]=useState(false),[pin,setPin]=useState('');
   const SECGR={rose:'linear-gradient(135deg,#7c2d2d,#4a1a1a)',amber:'linear-gradient(135deg,#7c5a1a,#4a2e08)',teal:'linear-gradient(135deg,#1a4a3a,#0f2e24)',indigo:'linear-gradient(135deg,#1a1a4a,#0f0f2e)'};
@@ -999,7 +999,8 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
     <button onClick={()=>pin===site.adminPin?setAuthed(true):alert('PIN이 틀렸습니다')} className="w-full py-3 rounded-xl bg-[#1a1a1a] text-white font-semibold">입장</button></div>
   </div>;
 
-  const TABS=[{id:'site',l:'홈 설정'},{id:'bg',l:'배경'},{id:'sections',l:'섹션/반'},{id:'google',l:'Google 로그인'},{id:'pin',l:'보안'}];
+  const pendingTeachers=(accounts||[]).filter(a=>a.role==='teacher_pending');
+  const TABS=[{id:'site',l:'홈 설정'},{id:'bg',l:'배경'},{id:'sections',l:'섹션/반'},{id:'google',l:'Google 로그인'},{id:'accounts',l:`교사 승인${pendingTeachers.length?` (${pendingTeachers.length})`:''}`},{id:'pin',l:'보안'}];
   return <div className="space-y-4">
     <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">⚙️ 관리자</h2><button onClick={()=>setAuthed(false)} className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 px-2 py-1 rounded-lg">로그아웃</button></div>
     <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1 overflow-x-auto">
@@ -1069,6 +1070,34 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
       <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">허용 이메일 (없으면 전체 허용)</label>
         <AllowedEmails site={site} setSite={setSite}/>
       </div>
+    </div>}
+
+    {tab==='accounts'&&<div className="space-y-3">
+      <p className="text-sm text-gray-500">교사로 가입 신청한 회원을 승인하면 교사 관리 기능을 사용할 수 있게 됩니다.</p>
+      {pendingTeachers.length===0&&<p className="text-center text-gray-400 py-8 text-sm">대기 중인 교사 신청이 없습니다.</p>}
+      {pendingTeachers.map(a=>(
+        <div key={a.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-sm flex-shrink-0" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{a.name[0]}</div>
+          <div className="flex-1"><p className="font-medium text-sm">{a.name}</p><p className="text-xs text-gray-400">{a.email}</p></div>
+          <div className="flex gap-1.5">
+            <button onClick={()=>setAccounts(p=>p.map(x=>x.id===a.id?{...x,role:'teacher'}:x))} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-lg text-xs font-medium hover:bg-[#2d5240]">승인</button>
+            <button onClick={()=>{if(confirm('이 신청을 거부할까요? 일반 회원으로 전환됩니다.'))setAccounts(p=>p.map(x=>x.id===a.id?{...x,role:'member'}:x));}} className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-100">거부</button>
+          </div>
+        </div>
+      ))}
+      {accounts&&accounts.filter(a=>a.role==='teacher').length>0&&(
+        <div className="pt-2">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">승인된 교사</p>
+          <div className="space-y-1.5">
+            {accounts.filter(a=>a.role==='teacher').map(a=>(
+              <div key={a.id} className="flex items-center justify-between bg-white border border-gray-100 rounded-xl px-3 py-2 text-sm">
+                <span>{a.name} <span className="text-gray-400 text-xs">{a.email}</span></span>
+                <button onClick={()=>{if(confirm('교사 권한을 해제할까요?'))setAccounts(p=>p.map(x=>x.id===a.id?{...x,role:'member'}:x));}} className="text-xs text-red-400 hover:text-red-600">권한 해제</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>}
 
     {tab==='pin'&&<div className="bg-gray-50 rounded-2xl p-4"><PinChg site={site} setSite={setSite}/></div>}
@@ -1205,12 +1234,11 @@ const hashPw = str => {
 };
 
 // ── 인증 모달 ─────────────────────────────────────────────
-const AuthModal = ({ site, accounts, setAccounts, requireRole, onSuccess, onClose }) => {
+const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
   const [tab, setTab] = useState('login');
-  const [form, setForm] = useState({ name: '', email: '', password: '', password2: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', password2: '', wantsTeacher: false });
   const [err, setErr] = useState('');
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErr(''); };
-  const isTeacher = requireRole === 'teacher';
 
   const gRef = React.useRef();
   useEffect(() => {
@@ -1221,9 +1249,7 @@ const AuthModal = ({ site, accounts, setAccounts, requireRole, onSuccess, onClos
         callback: res => {
           const p = decodeJWT(res.credential);
           if (!p) { setErr('Google 인증 오류'); return; }
-          const allowed = site.allowedEmails || [];
-          if (isTeacher && allowed.length > 0 && !allowed.includes(p.email)) { setErr('허용되지 않은 이메일: ' + p.email); return; }
-          onSuccess({ name: p.name, email: p.email, picture: p.picture, provider: 'google', role: isTeacher ? 'teacher' : 'member' });
+          onSuccess({ name: p.name, email: p.email, picture: p.picture, provider: 'google', role: 'member' });
         },
       });
       window.google.accounts.id.renderButton(gRef.current, { theme: 'outline', size: 'large', width: 300, text: 'signin_with', shape: 'pill', locale: 'ko' });
@@ -1235,7 +1261,6 @@ const AuthModal = ({ site, accounts, setAccounts, requireRole, onSuccess, onClos
     const acc = accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase());
     if (!acc) { setErr('등록되지 않은 이메일입니다.'); return; }
     if (acc.passwordHash !== hashPw(form.password)) { setErr('비밀번호가 틀렸습니다.'); return; }
-    if (isTeacher && acc.role === 'member') { setErr('교사 계정이 아닙니다. 일반 회원은 사진 다운로드만 가능합니다.'); return; }
     onSuccess({ name: acc.name, email: acc.email, provider: 'email', role: acc.role || 'teacher' });
   };
 
@@ -1245,7 +1270,7 @@ const AuthModal = ({ site, accounts, setAccounts, requireRole, onSuccess, onClos
     if (form.password.length < 6) { setErr('비밀번호는 6자 이상이어야 합니다.'); return; }
     if (form.password !== form.password2) { setErr('비밀번호가 일치하지 않습니다.'); return; }
     if (accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase())) { setErr('이미 등록된 이메일입니다.'); return; }
-    const role = isTeacher ? 'teacher' : 'member';
+    const role = form.wantsTeacher ? 'teacher_pending' : 'member';
     const newAcc = { id: nextId(accounts), name: form.name.trim(), email: form.email.trim(), passwordHash: hashPw(form.password), role };
     setAccounts(p => [...p, newAcc]);
     onSuccess({ name: newAcc.name, email: newAcc.email, provider: 'email', role });
@@ -1257,8 +1282,8 @@ const AuthModal = ({ site, accounts, setAccounts, requireRole, onSuccess, onClos
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
         <div className="bg-[#1a1a1a] px-6 py-5 text-center">
           <div className="text-[#b8934a] text-3xl mb-2">✝</div>
-          <h2 className="text-white font-bold text-lg">{isTeacher ? '교사 로그인' : '회원 로그인'}</h2>
-          <p className="text-white/40 text-xs mt-1">{isTeacher ? site.churchName : '회원가입 후 사진을 다운로드할 수 있어요'}</p>
+          <h2 className="text-white font-bold text-lg">로그인</h2>
+          <p className="text-white/40 text-xs mt-1">{site.churchName}</p>
         </div>
 
         {site.googleClientId && (
@@ -1273,7 +1298,7 @@ const AuthModal = ({ site, accounts, setAccounts, requireRole, onSuccess, onClos
 
         <div className={`flex gap-1 px-6 ${site.googleClientId ? 'pt-0' : 'pt-5'}`}>
           {['login', 'signup'].map(t => (
-            <button key={t} onClick={() => { setTab(t); setErr(''); setForm({ name: '', email: '', password: '', password2: '' }); }}
+            <button key={t} onClick={() => { setTab(t); setErr(''); setForm({ name: '', email: '', password: '', password2: '', wantsTeacher: false }); }}
               className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${tab === t ? 'bg-[#1a1a1a] text-white' : 'text-gray-400 hover:text-gray-700'}`}>
               {t === 'login' ? '로그인' : '회원가입'}
             </button>
@@ -1306,6 +1331,12 @@ const AuthModal = ({ site, accounts, setAccounts, requireRole, onSuccess, onClos
                 onKeyDown={e => { if (e.key === 'Enter') handleSignup(); }}
                 placeholder="••••••" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
             </div>
+          )}
+          {tab === 'signup' && (
+            <label className="flex items-start gap-2 text-xs text-gray-600 bg-gray-50 rounded-xl p-3 cursor-pointer">
+              <input type="checkbox" checked={form.wantsTeacher} onChange={e => set('wantsTeacher', e.target.checked)} className="mt-0.5 accent-[#b8934a]" />
+              <span>저는 <b>교사</b>입니다. (교사로 가입 신청 — 관리자 승인 후 교사 관리 기능을 이용할 수 있어요. 체크하지 않으면 일반 회원으로 가입되어 사진 다운로드만 가능합니다.)</span>
+            </label>
           )}
 
           {err && (
@@ -1341,13 +1372,16 @@ const App = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [pendingDownload, setPendingDownload] = useState(null);
-  const [loginIntent, setLoginIntent] = useState('member');
 
-  const handleTeacherBtn = () => { if (authUser?.role === 'teacher') { setShowManage(true); return; } setLoginIntent('teacher'); setShowLogin(true); };
+  const handleTeacherBtn = () => {
+    if (authUser?.role === 'teacher') { setShowManage(true); return; }
+    if (authUser?.role === 'teacher_pending') { alert('교사 가입 신청이 관리자 승인 대기 중입니다.'); return; }
+    if (authUser) { return; }
+    setShowLogin(true);
+  };
   const handleRequestDownload = p => {
     if (authUser) { downloadDataUrl(p.src, `${p.album || 'photo'}${p.caption ? '_' + p.caption : ''}.jpg`); return; }
     setPendingDownload(p);
-    setLoginIntent('member');
     setShowLogin(true);
   };
   const handleLogout = () => {
@@ -1382,12 +1416,12 @@ const App = () => {
           site={site}
           accounts={accounts}
           setAccounts={setAccounts}
-          requireRole={loginIntent === 'teacher' ? 'teacher' : undefined}
           onSuccess={user => {
             setAuthUser(user); setShowLogin(false);
             logLogin({ name: user.name, email: user.email || '', provider: user.provider });
             if (pendingDownload) { downloadDataUrl(pendingDownload.src, `${pendingDownload.album || 'photo'}${pendingDownload.caption ? '_' + pendingDownload.caption : ''}.jpg`); setPendingDownload(null); }
             else if (user.role === 'teacher') { setShowManage(true); }
+            else if (user.role === 'teacher_pending') { alert('교사 가입 신청이 완료되었습니다. 관리자 승인 후 교사 기능을 이용할 수 있어요.'); }
           }}
           onClose={() => { setShowLogin(false); setPendingDownload(null); }}
         />
@@ -1407,6 +1441,7 @@ const App = () => {
           meetings={meetings} setMeetings={setMeetings}
           photos={photos} setPhotos={setPhotos}
           prayers={prayers} setPrayers={setPrayers}
+          accounts={accounts} setAccounts={setAccounts}
         />
       )}
     </React.Fragment>
