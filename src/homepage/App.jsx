@@ -542,7 +542,7 @@ const PrayerFormModal=({onClose})=>{
 };
 
 // ── 교사 관리 패널 (슬라이드 드로어) ─────────────────────
-const ManagePanel=({onClose,authUser,onLogout,site,setSite,sections,setSections,classes,setClasses,students,setStudents,teachers,setTeachers,attendance,setAttendance,meetings,setMeetings,photos,setPhotos,prayers,setPrayers,accounts,setAccounts})=>{
+const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,setSections,classes,setClasses,students,setStudents,teachers,setTeachers,attendance,setAttendance,meetings,setMeetings,photos,setPhotos,prayers,setPrayers,accounts,setAccounts})=>{
   const [page,setPage]=useState('dashboard');
   const [selSec,setSelSec]=useState(null); // 섹션 필터
 
@@ -579,6 +579,7 @@ const ManagePanel=({onClose,authUser,onLogout,site,setSite,sections,setSections,
               {authUser.picture?<img src={authUser.picture} alt="" className="w-7 h-7 rounded-full border border-[#b8934a]/50" referrerPolicy="no-referrer"/>:<div className="w-7 h-7 rounded-full bg-[#b8934a] flex items-center justify-center text-white text-xs font-bold">{authUser.name?.[0]}</div>}
               <span className="text-white/70 text-xs hidden sm:inline">{authUser.name}</span>
               <button onClick={onLogout} className="text-white/40 hover:text-white text-xs px-2 py-1 rounded border border-white/20 hover:border-white/40 transition-all">로그아웃</button>
+              <button onClick={onWithdraw} className="text-red-300/60 hover:text-red-300 text-xs px-2 py-1 rounded border border-red-300/20 hover:border-red-300/40 transition-all">회원탈퇴</button>
             </div>
           )}
           <button onClick={onClose} className="text-white/60 hover:text-white text-xl leading-none ml-1">✕</button>
@@ -1371,18 +1372,12 @@ const App = () => {
   const [authUser, setAuthUser] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showManage, setShowManage] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [pendingDownload, setPendingDownload] = useState(null);
 
   const handleTeacherBtn = () => {
     if (authUser?.role === 'teacher') { setShowManage(true); return; }
-    if (authUser?.role === 'teacher_pending') {
-      if (confirm(`${authUser.name}님, 교사 가입 신청이 관리자 승인 대기 중입니다.\n로그아웃하시겠어요?`)) handleLogout();
-      return;
-    }
-    if (authUser) {
-      if (confirm(`${authUser.name}님으로 로그인되어 있습니다.\n로그아웃하시겠어요?`)) handleLogout();
-      return;
-    }
+    if (authUser) { setShowAccountMenu(true); return; }
     setShowLogin(true);
   };
   const handleRequestDownload = p => {
@@ -1391,8 +1386,13 @@ const App = () => {
     setShowLogin(true);
   };
   const handleLogout = () => {
-    setAuthUser(null); setShowManage(false);
+    setAuthUser(null); setShowManage(false); setShowAccountMenu(false);
     if (window.google && site.googleClientId) { try { window.google.accounts.id.disableAutoSelect(); } catch(e){} }
+  };
+  const handleWithdraw = () => {
+    if (!confirm('정말 회원탈퇴 하시겠어요? 계정 정보가 삭제되며 되돌릴 수 없습니다.')) return;
+    if (authUser?.email) setAccounts(p => p.filter(a => a.email.toLowerCase() !== authUser.email.toLowerCase()));
+    handleLogout();
   };
 
   return (
@@ -1433,11 +1433,29 @@ const App = () => {
         />
       )}
 
+      {showAccountMenu && authUser && (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={e => { if (e.target === e.currentTarget) setShowAccountMenu(false); }}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="bg-[#1a1a1a] px-6 py-5 text-center">
+              {authUser.picture ? <img src={authUser.picture} alt="" className="w-12 h-12 rounded-full mx-auto mb-2 border border-[#b8934a]/50" referrerPolicy="no-referrer" /> : <div className="w-12 h-12 rounded-full bg-[#b8934a] flex items-center justify-center text-white font-bold text-lg mx-auto mb-2">{authUser.name?.[0]}</div>}
+              <h2 className="text-white font-bold text-lg">{authUser.name}</h2>
+              <p className="text-white/40 text-xs mt-1">{authUser.role === 'teacher_pending' ? '교사 승인 대기 중' : '일반 회원'}</p>
+            </div>
+            <div className="p-6 space-y-2">
+              <button onClick={() => { setShowAccountMenu(false); handleLogout(); }} className="w-full py-3 bg-[#1a1a1a] text-white rounded-2xl text-sm font-semibold hover:bg-[#333] transition-all">로그아웃</button>
+              <button onClick={handleWithdraw} className="w-full py-3 border border-red-200 text-red-500 rounded-2xl text-sm font-semibold hover:bg-red-50 transition-all">회원탈퇴</button>
+              <button onClick={() => setShowAccountMenu(false)} className="w-full py-1.5 text-xs text-gray-400 hover:text-gray-600">닫기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showManage && authUser?.role === 'teacher' && (
         <ManagePanel
           onClose={() => setShowManage(false)}
           authUser={authUser}
           onLogout={handleLogout}
+          onWithdraw={handleWithdraw}
           site={site} setSite={setSite}
           sections={sections} setSections={setSections}
           classes={classes} setClasses={setClasses}
