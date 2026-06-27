@@ -371,7 +371,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
         {/* 콘텐츠 */}
         <div className="relative text-center px-6 max-w-4xl mx-auto" style={{color:heroTc}}>
           <p className="text-xs tracking-[0.4em] uppercase mb-6 font-sans opacity-90" style={{textShadow:heroShadow}}>CHURCH SCHOOL</p>
-          <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6 font-jua" style={{textShadow:heroShadow}}>
+          <h1 className="text-4xl md:text-6xl font-semibold leading-tight mb-6 font-jua" style={{textShadow:heroShadow}}>
             {site.churchName}
           </h1>
           <p className="text-lg md:text-xl mb-8 font-medium leading-relaxed opacity-90 font-jua" style={{textShadow:heroShadow}}>
@@ -435,7 +435,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">MINISTRIES</p>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 font-jua">부서 안내</h2>
+            <h2 className="text-3xl md:text-4xl font-semibold text-gray-900 font-jua">부서 안내</h2>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {sections.map(sec=>{
@@ -455,7 +455,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
                     )}
                   </div>
                   <div className="p-5">
-                    <h3 className="font-bold text-gray-900 text-lg mb-1 font-jua">{sec.name}</h3>
+                    <h3 className="font-semibold text-gray-900 text-lg mb-1 font-jua">{sec.name}</h3>
                     <p className="text-gray-500 text-sm mb-3 leading-relaxed">{sec.desc}</p>
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap gap-1">{secClasses.map(c=><span key={c.id} className="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">{c.name}</span>)}</div>
@@ -488,7 +488,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
               </div>
               <div className="p-6 space-y-4">
                 <div>
-                  <h3 className="font-bold text-gray-900 text-xl font-jua">{secDetail.name}</h3>
+                  <h3 className="font-semibold text-gray-900 text-xl font-jua">{secDetail.name}</h3>
                   <p className="text-gray-500 text-sm mt-1 leading-relaxed">{secDetail.desc}</p>
                 </div>
                 <div className="flex items-center justify-between">
