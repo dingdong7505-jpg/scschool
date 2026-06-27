@@ -34,3 +34,17 @@ export async function pushSharedState(key, value) {
     console.warn('pushSharedState failed', key, e);
   }
 }
+
+export async function sendOtp(email) {
+  if (!supabase) return { error: 'Supabase가 설정되지 않았습니다.' };
+  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
+export async function verifyOtp(email, token) {
+  if (!supabase) return { error: 'Supabase가 설정되지 않았습니다.' };
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' });
+  if (error) return { error: error.message };
+  return { error: null };
+}

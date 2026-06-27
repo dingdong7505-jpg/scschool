@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { logLogin, fetchSharedState, pushSharedState } from '../supabaseClient.js';
+import { logLogin, fetchSharedState, pushSharedState, sendOtp, verifyOtp } from '../supabaseClient.js';
 
 const downloadDataUrl = async (dataUrl, filename) => {
   if (!dataUrl) return;
@@ -1346,17 +1346,31 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
   const [resetStep, setResetStep] = useState('email');
   const [resetAcc, setResetAcc] = useState(null);
   const [resetPw, setResetPw] = useState({ pw: '', pw2: '' });
+  const [otpCode, setOtpCode] = useState('');
+  const [otpBusy, setOtpBusy] = useState(false);
 
-  const handleFindAccount = () => {
+  const handleFindAccount = async () => {
     const acc = accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase());
     if (!acc) { setErr('등록되지 않은 이메일입니다.'); return; }
-    setResetAcc(acc); setResetStep('newpass'); setErr('');
+    setOtpBusy(true);
+    const { error } = await sendOtp(form.email);
+    setOtpBusy(false);
+    if (error) { setErr('인증코드 발송 실패: ' + error); return; }
+    setResetAcc(acc); setResetStep('verify'); setErr('');
+  };
+  const handleVerifyOtp = async () => {
+    if (!otpCode.trim()) { setErr('인증코드를 입력하세요.'); return; }
+    setOtpBusy(true);
+    const { error } = await verifyOtp(form.email, otpCode.trim());
+    setOtpBusy(false);
+    if (error) { setErr('인증코드가 올바르지 않습니다.'); return; }
+    setResetStep('newpass'); setErr('');
   };
   const handleResetPassword = () => {
     if (resetPw.pw.length < 6) { setErr('비밀번호는 6자 이상이어야 합니다.'); return; }
     if (resetPw.pw !== resetPw.pw2) { setErr('비밀번호가 일치하지 않습니다.'); return; }
     setAccounts(p => p.map(a => a.id === resetAcc.id ? { ...a, passwordHash: hashPw(resetPw.pw) } : a));
-    setTab('login'); setResetStep('email'); setResetAcc(null); setResetPw({ pw: '', pw2: '' });
+    setTab('login'); setResetStep('email'); setResetAcc(null); setResetPw({ pw: '', pw2: '' }); setOtpCode('');
     setForm(f => ({ ...f, password: '' }));
     setMsg('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.');
   };
@@ -1441,7 +1455,20 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
                     placeholder="example@gmail.com" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
                 </div>
                 {err && <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{err}</p>}
-                <button onClick={handleFindAccount} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all">계정 확인</button>
+                <button onClick={handleFindAccount} disabled={otpBusy} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all disabled:opacity-50">{otpBusy ? '발송 중...' : '인증코드 받기'}</button>
+              </>
+            ) : resetStep === 'verify' ? (
+              <>
+                <p className="text-xs text-gray-500">{form.email}로 인증코드를 보냈습니다. 메일을 확인해주세요. (스팸함도 확인)</p>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">인증코드</label>
+                  <input value={otpCode} onChange={e => { setOtpCode(e.target.value); setErr(''); }}
+                    onKeyDown={e => { if (e.key === 'Enter') handleVerifyOtp(); }}
+                    placeholder="6자리 코드" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors tracking-widest text-center" />
+                </div>
+                {err && <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{err}</p>}
+                <button onClick={handleVerifyOtp} disabled={otpBusy} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all disabled:opacity-50">{otpBusy ? '확인 중...' : '인증코드 확인'}</button>
+                <button onClick={handleFindAccount} disabled={otpBusy} className="w-full py-1.5 text-xs text-gray-400 hover:text-[#b8934a]">코드 다시 받기</button>
               </>
             ) : (
               <>
@@ -1461,7 +1488,7 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
                 <button onClick={handleResetPassword} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all">비밀번호 변경</button>
               </>
             )}
-            <button onClick={() => { setTab('login'); setResetStep('email'); setResetAcc(null); setErr(''); }} className="w-full py-1.5 text-xs text-gray-400 hover:text-gray-600">로그인으로 돌아가기</button>
+            <button onClick={() => { setTab('login'); setResetStep('email'); setResetAcc(null); setOtpCode(''); setErr(''); }} className="w-full py-1.5 text-xs text-gray-400 hover:text-gray-600">로그인으로 돌아가기</button>
           </div>
         )}
 
