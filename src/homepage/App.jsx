@@ -799,8 +799,21 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
   const CYCLE={'출석':'결석','결석':'조퇴','조퇴':'공결','공결':'출석'};
   const clsSts=students.filter(s=>s.classId===selCls&&s.active);
   const recs=attendance[selDate]||{};
-  const toggle=id=>{setAttendance(p=>({...p,[selDate]:{...(p[selDate]||{}),[id]:CYCLE[recs[id]||'출석']}}));setSaved(false);};
-  const setAll=st=>{const nr={...(attendance[selDate]||{})};clsSts.forEach(s=>nr[s.id]=st);setAttendance(p=>({...p,[selDate]:nr}));setSaved(false);};
+
+  // 같은 날짜라도 다른 반/학생을 동시에 체크하는 다른 교사의 변경이 덮어써지지 않도록,
+  // 저장 시 서버의 최신 출석 데이터를 받아와 이번 변경분만 병합해서 다시 올린다.
+  const commitAttendance=async(date,updater)=>{
+    setAttendance(p=>({...p,[date]:updater(p[date]||{})}));
+    try{
+      const remote=await fetchSharedState('attendance_v3');
+      const base=remote||{};
+      const merged={...base,[date]:updater(base[date]||{})};
+      setAttendance(merged);
+      await pushSharedState('attendance_v3',merged);
+    }catch(e){ console.warn('attendance sync failed',e); }
+  };
+  const toggle=id=>{commitAttendance(selDate,day=>({...day,[id]:CYCLE[day[id]||'출석']}));setSaved(false);};
+  const setAll=st=>{commitAttendance(selDate,day=>{const nr={...day};clsSts.forEach(s=>nr[s.id]=st);return nr;});setSaved(false);};
   const counts={출석:0,결석:0,조퇴:0,공결:0,미입력:0};
   clsSts.forEach(s=>{const st=recs[s.id];st?counts[st]++:counts['미입력']++;});
   const cls=classes.find(c=>c.id===selCls);
