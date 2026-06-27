@@ -259,6 +259,40 @@ const Sel=({label,value,onChange,options})=>(
 );
 
 
+const MiniCalendar=({events})=>{
+  const today=new Date();
+  const year=today.getFullYear(),month=today.getMonth();
+  const first=new Date(year,month,1);
+  const startDow=first.getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const eventDays=new Set((events||[]).filter(e=>{const d=new Date(e.date+'T00:00:00');return d.getFullYear()===year&&d.getMonth()===month;}).map(e=>new Date(e.date+'T00:00:00').getDate()));
+  const cells=[];
+  for(let i=0;i<startDow;i++)cells.push(null);
+  for(let d=1;d<=daysInMonth;d++)cells.push(d);
+  return (
+    <div className="bg-[#faf7f2] rounded-2xl p-4">
+      <p className="text-center font-bold text-gray-900 text-sm mb-3">{year}년 {month+1}월</p>
+      <div className="grid grid-cols-7 gap-y-1 text-center text-[11px] text-gray-400 mb-1">
+        {['일','월','화','수','목','금','토'].map(d=><span key={d}>{d}</span>)}
+      </div>
+      <div className="grid grid-cols-7 gap-y-1">
+        {cells.map((d,i)=>{
+          const isToday=d===today.getDate();
+          const hasEvent=d&&eventDays.has(d);
+          return (
+            <div key={i} className="flex items-center justify-center">
+              <div className={`w-7 h-7 flex flex-col items-center justify-center rounded-full text-xs ${isToday?'bg-[#1a1a1a] text-white font-bold':'text-gray-700'}`}>
+                {d||''}
+                {hasEvent&&!isToday&&<span className="w-1 h-1 rounded-full bg-[#b8934a] -mt-0.5"/>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 // ── 공개 홈페이지 ─────────────────────────────────────────
 const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenManage,authUser,onRequestDownload,onRequestLogin})=>{
   const [scrolled,setScrolled]=useState(false);
@@ -519,21 +553,24 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
       {/* ── 다가오는 행사 ── */}
       {events&&events.filter(e=>e.date>=todayStr()).length>0&&(
         <section className="py-20 bg-white">
-          <div className="max-w-4xl mx-auto px-6">
+          <div className="max-w-5xl mx-auto px-6">
             <div className="text-center mb-10">
               <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">EVENTS</p>
               <h2 className="text-3xl font-bold text-gray-900 font-jua">다가오는 행사</h2>
             </div>
-            <div className="space-y-3">
-              {events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5).map(e=>(
-                <div key={e.id} className="flex items-center gap-4 bg-[#faf7f2] rounded-2xl p-4">
-                  <div className="w-14 h-14 rounded-xl bg-[#1a1a1a] text-white flex flex-col items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] leading-none opacity-70">{e.date.slice(5,7)}월</span>
-                    <span className="text-xl font-bold leading-none">{e.date.slice(8,10)}</span>
+            <div className="grid md:grid-cols-[300px_1fr] gap-6 items-start">
+              <MiniCalendar events={events}/>
+              <div className="space-y-2.5">
+                {events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(e=>(
+                  <div key={e.id} className="flex items-center gap-3 bg-[#faf7f2] rounded-xl p-3">
+                    <div className="w-11 h-11 rounded-lg bg-[#1a1a1a] text-white flex flex-col items-center justify-center flex-shrink-0">
+                      <span className="text-[9px] leading-none opacity-70">{e.date.slice(5,7)}월</span>
+                      <span className="text-base font-bold leading-none">{e.date.slice(8,10)}</span>
+                    </div>
+                    <div className="flex-1 min-w-0"><p className="font-bold text-gray-900 text-sm truncate">{e.title}</p>{e.desc&&<p className="text-xs text-gray-500 mt-0.5 truncate">{e.desc}</p>}</div>
                   </div>
-                  <div className="flex-1"><p className="font-bold text-gray-900">{e.title}</p>{e.desc&&<p className="text-sm text-gray-500 mt-0.5">{e.desc}</p>}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </section>
