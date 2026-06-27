@@ -794,7 +794,7 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">출석체크</h2><button onClick={exportAttendance} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-xl text-xs font-medium hover:bg-[#2d5240]">⬇ 엑셀 다운로드</button></div>
+      <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">출석체크</h2><div className="flex gap-2"><button onClick={()=>{if(confirm('모든 출석 기록을 초기화할까요? 되돌릴 수 없습니다.'))setAttendance({});}} className="px-3 py-1.5 border border-red-200 text-red-500 rounded-xl text-xs font-medium hover:bg-red-50">전체 초기화</button><button onClick={exportAttendance} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-xl text-xs font-medium hover:bg-[#2d5240]">⬇ 엑셀 다운로드</button></div></div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-medium text-gray-600 block mb-1">날짜</label>
