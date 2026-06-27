@@ -302,7 +302,7 @@ const MiniCalendar=({events,sections})=>{
           const dayEvents=d?(eventsByDay[d]||[]):[];
           return (
             <div key={i} className="min-h-[44px] rounded-md p-0.5">
-              {d&&<span className={`text-[10px] inline-flex items-center justify-center w-4 h-4 rounded-full ${isToday?'bg-[#1a1a1a] text-white font-bold':'text-gray-600'}`}>{d}</span>}
+              {d&&<span className={`text-[13px] inline-flex items-center justify-center w-5 h-5 rounded-full ${isToday?'bg-[#1a1a1a] text-white font-bold':'text-gray-700'}`}>{d}</span>}
               <div className="space-y-0.5 mt-0.5">
                 {dayEvents.slice(0,2).map(e=>(
                   <div key={e.id} className="flex items-center gap-0.5 text-[8px] leading-tight truncate" style={{color:sectionColorOf(sections,e.sectionId)}}>
