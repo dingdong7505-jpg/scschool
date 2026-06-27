@@ -222,6 +222,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
   const [mobileMenu,setMobileMenu]=useState(false);
   const [showPrayerForm,setShowPrayerForm]=useState(false);
   const [lb,setLb]=useState(null);
+  const [secDetail,setSecDetail]=useState(null);
 
   const downloadPhoto=p=>{
     if(!p?.src)return;
@@ -398,7 +399,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
               const cnt=students.filter(s=>secClasses.some(c=>c.id===s.classId)&&s.active).length;
               const th=secTheme[sec.color]||secTheme.teal;
               return (
-                <div key={sec.id} className="group rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100">
+                <div key={sec.id} onClick={()=>setSecDetail(sec)} className="group rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100">
                   <div className="h-36 flex items-center justify-center text-6xl relative" style={{background:`linear-gradient(${sec.gradient})`}}>
                     <div className="absolute inset-0 opacity-20" style={{backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.3) 1px,transparent 1px)',backgroundSize:'20px 20px'}}/>
                     <span className="relative">{sec.emoji}</span>
@@ -417,6 +418,52 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
           </div>
         </div>
       </section>
+
+      {secDetail&&(()=>{
+        const secClasses=classes.filter(c=>c.sectionId===secDetail.id);
+        const cnt=students.filter(s=>secClasses.some(c=>c.id===s.classId)&&s.active).length;
+        const rows=[
+          {l:'예배시간',v:secDetail.serviceTime,icon:'🕊️'},
+          {l:'담당 교역자',v:secDetail.pastor,icon:'🙏'},
+          {l:'이번 주 주제',v:secDetail.theme,icon:'💬'},
+          {l:'말씀',v:secDetail.verse,icon:'📖'},
+        ].filter(r=>r.v);
+        return (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={e=>{if(e.target===e.currentTarget)setSecDetail(null);}}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden max-h-[85vh] overflow-y-auto">
+              <div className="h-28 flex items-center justify-center text-5xl relative" style={{background:`linear-gradient(${secDetail.gradient})`}}>
+                <button onClick={()=>setSecDetail(null)} className="absolute top-3 right-3 text-white/80 hover:text-white text-xl">✕</button>
+                <span>{secDetail.emoji}</span>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <h3 className="font-bold text-gray-900 text-xl font-jua">{secDetail.name}</h3>
+                  <p className="text-gray-500 text-sm mt-1 leading-relaxed">{secDetail.desc}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap gap-1">{secClasses.map(c=><span key={c.id} className="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">{c.name}</span>)}</div>
+                  <span className="text-xs text-gray-400 font-medium">{cnt}명</span>
+                </div>
+                {rows.length>0&&(
+                  <div className="space-y-2 border-t border-gray-100 pt-4">
+                    {rows.map(r=>(
+                      <div key={r.l} className="flex gap-3 text-sm">
+                        <span className="flex-shrink-0 w-20 text-gray-400">{r.icon} {r.l}</span>
+                        <span className="text-gray-700 font-medium">{r.v}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {secDetail.notice&&(
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-800">
+                    📢 {secDetail.notice}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 이번 주 생일 + 기도제목 ── */}
       <section className="py-24" style={{background:'#faf7f2'}}>
@@ -1079,7 +1126,12 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
           <div className="grid grid-cols-2 gap-2">
             <Inp label="이름" value={sec.name} onChange={v=>setSections(p=>p.map(s=>s.id===sec.id?{...s,name:v}:s))}/>
             <Inp label="설명" value={sec.desc||''} onChange={v=>setSections(p=>p.map(s=>s.id===sec.id?{...s,desc:v}:s))}/>
+            <Inp label="예배시간" value={sec.serviceTime||''} onChange={v=>setSections(p=>p.map(s=>s.id===sec.id?{...s,serviceTime:v}:s))} placeholder="예: 주일 오전 10시"/>
+            <Inp label="담당 교역자" value={sec.pastor||''} onChange={v=>setSections(p=>p.map(s=>s.id===sec.id?{...s,pastor:v}:s))} placeholder="예: 김OO 전도사"/>
+            <Inp label="이번 주 주제" value={sec.theme||''} onChange={v=>setSections(p=>p.map(s=>s.id===sec.id?{...s,theme:v}:s))}/>
+            <Inp label="말씀" value={sec.verse||''} onChange={v=>setSections(p=>p.map(s=>s.id===sec.id?{...s,verse:v}:s))} placeholder="예: 잠언 22:6"/>
           </div>
+          <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">공지사항</label><textarea value={sec.notice||''} onChange={e=>setSections(p=>p.map(s=>s.id===sec.id?{...s,notice:e.target.value}:s))} className="border border-gray-200 rounded-xl px-3 py-2 text-sm h-16 resize-none outline-none focus:border-[#b8934a]" placeholder="공지 없으면 비워두세요"/></div>
           <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">색상</label><div className="flex gap-1">{COLS.map(c=><button key={c.value} onClick={()=>setSections(p=>p.map(s=>s.id===sec.id?{...s,color:c.value}:s))} className={`px-2 py-1 rounded-lg text-xs border-2 transition-all ${sec.color===c.value?'border-[#b8934a] bg-[#b8934a]/10':'border-gray-200'}`}>{c.label}</button>)}</div></div>
           <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">이모지</label><div className="flex gap-1 flex-wrap">{EMJS.map(e=><button key={e} onClick={()=>setSections(p=>p.map(s=>s.id===sec.id?{...s,emoji:e}:s))} className={`w-8 h-8 rounded-lg border-2 text-base transition-all ${sec.emoji===e?'border-[#b8934a] bg-[#b8934a]/10':'border-gray-200'}`}>{e}</button>)}</div></div>
           <div className="border-t border-gray-200 pt-3">
