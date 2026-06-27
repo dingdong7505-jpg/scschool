@@ -400,9 +400,15 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
               const th=secTheme[sec.color]||secTheme.teal;
               return (
                 <div key={sec.id} onClick={()=>setSecDetail(sec)} className="group rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-100">
-                  <div className="h-36 flex items-center justify-center text-6xl relative" style={{background:`linear-gradient(${sec.gradient})`}}>
-                    <div className="absolute inset-0 opacity-20" style={{backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.3) 1px,transparent 1px)',backgroundSize:'20px 20px'}}/>
-                    <span className="relative">{sec.emoji}</span>
+                  <div className="h-36 flex items-center justify-center text-6xl relative overflow-hidden" style={sec.bannerImage?{}:{background:`linear-gradient(${sec.gradient})`}}>
+                    {sec.bannerImage?(
+                      <img src={sec.bannerImage} alt="" className="absolute inset-0 w-full h-full object-cover"/>
+                    ):(
+                      <>
+                        <div className="absolute inset-0 opacity-20" style={{backgroundImage:'radial-gradient(circle,rgba(255,255,255,0.3) 1px,transparent 1px)',backgroundSize:'20px 20px'}}/>
+                        <span className="relative">{sec.emoji}</span>
+                      </>
+                    )}
                   </div>
                   <div className="p-5">
                     <h3 className="font-bold text-gray-900 text-lg mb-1 font-jua">{sec.name}</h3>
@@ -431,9 +437,10 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
         return (
           <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={e=>{if(e.target===e.currentTarget)setSecDetail(null);}}>
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden max-h-[85vh] overflow-y-auto">
-              <div className="h-28 flex items-center justify-center text-5xl relative" style={{background:`linear-gradient(${secDetail.gradient})`}}>
-                <button onClick={()=>setSecDetail(null)} className="absolute top-3 right-3 text-white/80 hover:text-white text-xl">✕</button>
-                <span>{secDetail.emoji}</span>
+              <div className="h-28 flex items-center justify-center text-5xl relative overflow-hidden" style={secDetail.bannerImage?{}:{background:`linear-gradient(${secDetail.gradient})`}}>
+                {secDetail.bannerImage&&<img src={secDetail.bannerImage} alt="" className="absolute inset-0 w-full h-full object-cover"/>}
+                <button onClick={()=>setSecDetail(null)} className="absolute top-3 right-3 text-white/90 hover:text-white text-xl drop-shadow z-10">✕</button>
+                {!secDetail.bannerImage&&<span>{secDetail.emoji}</span>}
               </div>
               <div className="p-6 space-y-4">
                 <div>
@@ -1133,7 +1140,12 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
           </div>
           <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">공지사항</label><textarea value={sec.notice||''} onChange={e=>setSections(p=>p.map(s=>s.id===sec.id?{...s,notice:e.target.value}:s))} className="border border-gray-200 rounded-xl px-3 py-2 text-sm h-16 resize-none outline-none focus:border-[#b8934a]" placeholder="공지 없으면 비워두세요"/></div>
           <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">색상</label><div className="flex gap-1">{COLS.map(c=><button key={c.value} onClick={()=>setSections(p=>p.map(s=>s.id===sec.id?{...s,color:c.value}:s))} className={`px-2 py-1 rounded-lg text-xs border-2 transition-all ${sec.color===c.value?'border-[#b8934a] bg-[#b8934a]/10':'border-gray-200'}`}>{c.label}</button>)}</div></div>
-          <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">이모지</label><div className="flex gap-1 flex-wrap">{EMJS.map(e=><button key={e} onClick={()=>setSections(p=>p.map(s=>s.id===sec.id?{...s,emoji:e}:s))} className={`w-8 h-8 rounded-lg border-2 text-base transition-all ${sec.emoji===e?'border-[#b8934a] bg-[#b8934a]/10':'border-gray-200'}`}>{e}</button>)}</div></div>
+          <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">이모지 (사진 없을 때 표시)</label><div className="flex gap-1 flex-wrap">{EMJS.map(e=><button key={e} onClick={()=>setSections(p=>p.map(s=>s.id===sec.id?{...s,emoji:e}:s))} className={`w-8 h-8 rounded-lg border-2 text-base transition-all ${sec.emoji===e?'border-[#b8934a] bg-[#b8934a]/10':'border-gray-200'}`}>{e}</button>)}</div></div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-gray-600">대표 사진</label>
+            <input type="file" accept="image/*" onChange={e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setSections(p=>p.map(s=>s.id===sec.id?{...s,bannerImage:ev.target.result}:s));r.readAsDataURL(file);}} className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700"/>
+            {sec.bannerImage&&<div className="flex items-center gap-2 mt-1"><img src={sec.bannerImage} alt="" className="w-16 h-16 rounded-lg object-cover"/><button onClick={()=>setSections(p=>p.map(s=>s.id===sec.id?{...s,bannerImage:''}:s))} className="text-xs text-red-400 hover:underline">사진 제거</button></div>}
+          </div>
           <div className="border-t border-gray-200 pt-3">
             <div className="flex items-center justify-between mb-2"><span className="text-xs font-bold text-gray-500">반 목록</span><button onClick={()=>{const n=prompt('반 이름:');if(n)setClasses(p=>[...p,{id:'c'+Date.now(),name:n,sectionId:sec.id}]);}} className="text-xs text-[#b8934a] font-medium">+ 반 추가</button></div>
             {classes.filter(c=>c.sectionId===sec.id).map(cls=>{const sc=students.filter(s=>s.classId===cls.id&&s.active).length;return <div key={cls.id} className="flex items-center gap-2 py-1.5 border-b border-gray-100"><span className="flex-1 text-sm font-medium">{cls.name} <span className="text-xs text-gray-400">({sc}명)</span></span><button onClick={()=>{const n=prompt('반 이름 변경:',cls.name);if(n)setClasses(p=>p.map(c=>c.id===cls.id?{...c,name:n}:c));}} className="text-xs text-[#b8934a] hover:underline">수정</button><button onClick={()=>{if(sc>0)return alert('학생이 있어 삭제 불가');if(confirm('삭제?'))setClasses(p=>p.filter(c=>c.id!==cls.id));}} className="text-xs text-red-400 hover:underline">삭제</button></div>;})}
