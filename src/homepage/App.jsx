@@ -159,13 +159,18 @@ function useLocalState(key,init){
 function useLS(key,init){
   const [v,setV]=useState(()=>{ try{const s=localStorage.getItem(key);return s?JSON.parse(s):(typeof init==='function'?init():init);}catch{return typeof init==='function'?init():init;} });
   const remoteReady=useRef(false);
+  const initialRef=useRef(v);
+  const currentRef=useRef(v);
+  useEffect(()=>{ currentRef.current=v; },[v]);
 
   useEffect(()=>{
     let alive=true;
     fetchSharedState(key).then(remote=>{
       if(!alive)return;
-      if(remote!==null){ setV(remote); }
-      else { pushSharedState(key,v); }
+      if(remote!==null){
+        if(currentRef.current===initialRef.current){ setV(remote); }
+        else { pushSharedState(key,currentRef.current); }
+      } else { pushSharedState(key,currentRef.current); }
       remoteReady.current=true;
     });
     return ()=>{ alive=false; };

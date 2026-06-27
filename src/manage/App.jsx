@@ -110,13 +110,18 @@ function useSharedLS(key, init) {
     catch { return typeof init==='function'?init():init; }
   });
   const remoteReady = useRef(false);
+  const initialRef = useRef(val);
+  const currentRef = useRef(val);
+  useEffect(() => { currentRef.current = val; }, [val]);
 
   useEffect(() => {
     let alive = true;
     fetchSharedState(key).then(remote => {
       if (!alive) return;
-      if (remote !== null) { setVal(remote); }
-      else { pushSharedState(key, val); }
+      if (remote !== null) {
+        if (currentRef.current === initialRef.current) { setVal(remote); }
+        else { pushSharedState(key, currentRef.current); }
+      } else { pushSharedState(key, currentRef.current); }
       remoteReady.current = true;
     });
     return () => { alive = false; };
