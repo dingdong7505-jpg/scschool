@@ -1553,7 +1553,8 @@ const LoginPage = ({ homeContent, onLogin }) => {
   const decodeJWT = token => {
     try {
       const b64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-      return JSON.parse(atob(b64));
+      const json = decodeURIComponent(atob(b64).split('').map(c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));
+      return JSON.parse(json);
     } catch { return null; }
   };
 

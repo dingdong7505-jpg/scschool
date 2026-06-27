@@ -204,7 +204,7 @@ const getAge=bd=>{ if(!bd)return '';return new Date().getFullYear()-parseInt(bd.
 const getBMMDD=bd=>{ if(!bd)return '';const[,m,d]=bd.split('-');return `${m}월 ${d}일`; };
 const nextId=arr=>arr.length?Math.max(...arr.map(x=>x.id))+1:1;
 const fmtWeekDiff=d=>d===0?'오늘!🥳':d>0?`D-${d}`:`${-d}일 전`;
-const decodeJWT=token=>{ try{const b=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(atob(b));}catch{return null;} };
+const decodeJWT=token=>{ try{const b=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');const json=decodeURIComponent(atob(b).split('').map(c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));return JSON.parse(json);}catch{return null;} };
 
 // ── 공통 컴포넌트 ─────────────────────────────────────────
 const Modal=({title,onClose,children,wide=false})=>(
