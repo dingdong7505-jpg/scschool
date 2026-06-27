@@ -851,14 +851,15 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
   }),[students,search,fSec,classes,sections]);
 
   const StForm=({initial,onSave,onClose})=>{
-    const e={name:'',classId:classes[0]?.id||'',grade:'',phone:'',parentPhone:'',birthDate:'',registeredDate:todayStr(),memo:'',active:true};
+    const e={name:'',classId:classes[0]?.id||'',grade:'',gender:'',phone:'',parentPhone:'',birthDate:'',address:'',registeredDate:todayStr(),memo:'',active:true};
     const [form,setForm]=useState(initial||e);
     const set=(k,v)=>setForm(f=>({...f,[k]:v}));
     return <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3"><Inp label="이름" value={form.name} onChange={v=>set('name',v)} required/><Sel label="반" value={form.classId} onChange={v=>set('classId',v)} options={classes.map(c=>({value:c.id,label:c.name}))}/></div>
-      <div className="grid grid-cols-2 gap-3"><Inp label="학년" value={form.grade} onChange={v=>set('grade',v)}/><Inp label="생년월일" type="date" value={form.birthDate} onChange={v=>set('birthDate',v)}/></div>
+      <div className="grid grid-cols-3 gap-3"><Inp label="학년" value={form.grade} onChange={v=>set('grade',v)}/><Sel label="성별" value={form.gender} onChange={v=>set('gender',v)} options={[{value:'',label:'선택 안 함'},{value:'남',label:'남'},{value:'여',label:'여'}]}/><Inp label="생년월일" type="date" value={form.birthDate} onChange={v=>set('birthDate',v)}/></div>
       <Inp label="학생 연락처" value={form.phone} onChange={v=>set('phone',v)}/>
       <Inp label="부모님 연락처" value={form.parentPhone} onChange={v=>set('parentPhone',v)}/>
+      <Inp label="주소" value={form.address} onChange={v=>set('address',v)} placeholder="예: 서울시 강남구 ..."/>
       <Inp label="등록일" type="date" value={form.registeredDate} onChange={v=>set('registeredDate',v)}/>
       <div className="flex flex-col gap-1"><label className="text-sm font-medium text-gray-700">메모</label><textarea value={form.memo} onChange={e=>set('memo',e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm h-16 resize-none outline-none focus:border-[#b8934a]"/></div>
       <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={form.active} onChange={e=>set('active',e.target.checked)} className="accent-[#b8934a]"/>재적 중</label>
@@ -875,7 +876,12 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
     return <div className="space-y-4">
       <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{s.name[0]}</div>
       <div><div className="flex items-center gap-2"><h2 className="text-lg font-bold">{s.name}{isThisWeek(s.birthDate)&&' 🎂'}</h2>{!s.active&&<span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">제적</span>}</div><p className="text-sm text-gray-500">{sec?.name} · {cls?.name} · {s.grade}</p></div></div>
-      <div className="grid grid-cols-2 gap-2 text-sm">{s.birthDate&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">생년월일</p><p className="font-medium">{fmt(s.birthDate)} ({getAge(s.birthDate)})</p></div>}<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">등록일</p><p className="font-medium">{fmt(s.registeredDate)}</p></div>{s.phone&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">학생</p><p className="font-medium">{s.phone}</p></div>}{s.parentPhone&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">부모님</p><p className="font-medium">{s.parentPhone}</p></div>}</div>
+      <div className="grid grid-cols-2 gap-2 text-sm">{s.gender&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">성별</p><p className="font-medium">{s.gender}</p></div>}{s.birthDate&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">생년월일</p><p className="font-medium">{fmt(s.birthDate)} ({getAge(s.birthDate)})</p></div>}<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">등록일</p><p className="font-medium">{fmt(s.registeredDate)}</p></div>{s.phone&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">학생</p><p className="font-medium">{s.phone}</p></div>}{s.parentPhone&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">부모님</p><p className="font-medium">{s.parentPhone}</p></div>}</div>
+      {s.address&&<div className="space-y-2">
+        <div className="bg-gray-50 rounded-xl p-3 text-sm"><p className="text-xs text-gray-400 mb-1">주소</p><p className="font-medium">{s.address}</p></div>
+        <iframe title="지도" className="w-full h-40 rounded-xl border border-gray-100" loading="lazy" src={`https://www.google.com/maps?q=${encodeURIComponent(s.address)}&output=embed`}/>
+        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.address)}`} target="_blank" rel="noreferrer" className="block text-center text-xs text-[#b8934a] hover:underline">Google 지도에서 크게 보기 ↗</a>
+      </div>}
       {s.memo&&<div className="bg-amber-50 rounded-xl p-3 text-sm">📝 {s.memo}</div>}
       <div><h3 className="font-semibold text-gray-800 mb-2 text-sm">출석 ({recs.length}회)</h3>
       <div className="grid grid-cols-4 gap-2 text-center text-xs mb-2">{Object.entries(cnt).map(([k,v])=><div key={k} className="bg-gray-50 rounded-xl p-2"><p className="font-bold text-base">{v}</p><p className="text-gray-400">{k}</p></div>)}</div>
@@ -896,7 +902,7 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
     const rows=students.map(s=>{
       const c=classes.find(c=>c.id===s.classId);
       const sc=sections.find(se=>se.id===c?.sectionId);
-      return {이름:s.name,부서:sc?.name||'',반:c?.name||'',학년:s.grade||'',생년월일:s.birthDate||'',학생연락처:s.phone||'',부모님연락처:s.parentPhone||'',등록일:s.registeredDate||'',재적여부:s.active?'재적':'제적',메모:s.memo||''};
+      return {이름:s.name,부서:sc?.name||'',반:c?.name||'',학년:s.grade||'',성별:s.gender||'',생년월일:s.birthDate||'',학생연락처:s.phone||'',부모님연락처:s.parentPhone||'',주소:s.address||'',등록일:s.registeredDate||'',재적여부:s.active?'재적':'제적',메모:s.memo||''};
     });
     exportXLSX(rows,`교적부_${todayStr()}.xlsx`,'교적부');
   };
@@ -914,7 +920,7 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
           {ss.map(s=>(
             <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm cursor-pointer transition-all" onClick={()=>setDetailSt(s)}>
               <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-sm flex-shrink-0" style={{background:s.active?'linear-gradient(135deg,#b8934a,#d4aa6e)':'#d1d5db'}}>{s.name[0]}</div>
-              <div className="flex-1 min-w-0"><div className="flex items-center gap-1.5"><span className="font-medium text-sm">{s.name}</span>{isThisWeek(s.birthDate)&&'🎂'}{!s.active&&<span className="text-xs bg-red-100 text-red-500 px-1.5 rounded-full">제적</span>}</div><p className="text-xs text-gray-400">{s.grade}{s.birthDate&&` · ${getBMMDD(s.birthDate)}`}</p></div>
+              <div className="flex-1 min-w-0"><div className="flex items-center gap-1.5"><span className="font-medium text-sm">{s.name}</span>{s.gender&&<span className="text-xs text-gray-400">({s.gender})</span>}{isThisWeek(s.birthDate)&&'🎂'}{!s.active&&<span className="text-xs bg-red-100 text-red-500 px-1.5 rounded-full">제적</span>}</div><p className="text-xs text-gray-400">{s.grade}{s.birthDate&&` · ${getBMMDD(s.birthDate)}`}</p></div>
               <div className="flex gap-1"><button onClick={e=>{e.stopPropagation();setEditSt(s);}} className="p-1.5 hover:bg-[#b8934a]/10 rounded-lg text-[#b8934a] text-sm">✏️</button><button onClick={e=>{e.stopPropagation();if(confirm('삭제?'))setStudents(p=>p.filter(x=>x.id!==s.id));}} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 text-sm">🗑</button></div>
             </div>
           ))}
