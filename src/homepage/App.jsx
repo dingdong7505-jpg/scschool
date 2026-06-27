@@ -221,6 +221,11 @@ const isThisMonth=bd=>{ if(!bd)return false;return parseInt(bd.split('-')[1])===
 const getAge=bd=>{ if(!bd)return '';return new Date().getFullYear()-parseInt(bd.split('-')[0])+'세'; };
 const getBMMDD=bd=>{ if(!bd)return '';const[,m,d]=bd.split('-');return `${m}월 ${d}일`; };
 const nextId=arr=>arr.length?Math.max(...arr.map(x=>x.id))+1:1;
+const SECTION_COLOR_HEX={rose:'#dc2626',amber:'#d97706',teal:'#0d9488',indigo:'#6366f1',purple:'#9333ea'};
+const sectionColorOf=(sections,sectionId)=>{
+  const sec=sections?.find(s=>s.id===sectionId);
+  return SECTION_COLOR_HEX[sec?.color]||'#b8934a';
+};
 const fmtWeekDiff=d=>d===0?'오늘!🥳':d>0?`D-${d}`:`${-d}일 전`;
 
 // ── 공통 컴포넌트 ─────────────────────────────────────────
@@ -259,31 +264,44 @@ const Sel=({label,value,onChange,options})=>(
 );
 
 
-const MiniCalendar=({events})=>{
+const MiniCalendar=({events,sections})=>{
   const today=new Date();
   const year=today.getFullYear(),month=today.getMonth();
   const first=new Date(year,month,1);
   const startDow=first.getDay();
   const daysInMonth=new Date(year,month+1,0).getDate();
-  const eventDays=new Set((events||[]).filter(e=>{const d=new Date(e.date+'T00:00:00');return d.getFullYear()===year&&d.getMonth()===month;}).map(e=>new Date(e.date+'T00:00:00').getDate()));
+  const eventsByDay={};
+  (events||[]).forEach(e=>{
+    const d=new Date(e.date+'T00:00:00');
+    if(d.getFullYear()===year&&d.getMonth()===month){
+      const day=d.getDate();
+      (eventsByDay[day]=eventsByDay[day]||[]).push(e);
+    }
+  });
   const cells=[];
   for(let i=0;i<startDow;i++)cells.push(null);
   for(let d=1;d<=daysInMonth;d++)cells.push(d);
   return (
-    <div className="bg-[#faf7f2] rounded-2xl p-4">
+    <div className="bg-[#faf7f2] rounded-2xl p-3">
       <p className="text-center font-bold text-gray-900 text-sm mb-3">{year}년 {month+1}월</p>
-      <div className="grid grid-cols-7 gap-y-1 text-center text-[11px] text-gray-400 mb-1">
+      <div className="grid grid-cols-7 text-center text-[10px] text-gray-400 mb-1">
         {['일','월','화','수','목','금','토'].map(d=><span key={d}>{d}</span>)}
       </div>
-      <div className="grid grid-cols-7 gap-y-1">
+      <div className="grid grid-cols-7 gap-[2px]">
         {cells.map((d,i)=>{
           const isToday=d===today.getDate();
-          const hasEvent=d&&eventDays.has(d);
+          const dayEvents=d?(eventsByDay[d]||[]):[];
           return (
-            <div key={i} className="flex items-center justify-center">
-              <div className={`w-7 h-7 flex flex-col items-center justify-center rounded-full text-xs ${isToday?'bg-[#1a1a1a] text-white font-bold':'text-gray-700'}`}>
-                {d||''}
-                {hasEvent&&!isToday&&<span className="w-1 h-1 rounded-full bg-[#b8934a] -mt-0.5"/>}
+            <div key={i} className="min-h-[44px] rounded-md p-0.5">
+              {d&&<span className={`text-[10px] inline-flex items-center justify-center w-4 h-4 rounded-full ${isToday?'bg-[#1a1a1a] text-white font-bold':'text-gray-600'}`}>{d}</span>}
+              <div className="space-y-0.5 mt-0.5">
+                {dayEvents.slice(0,2).map(e=>(
+                  <div key={e.id} className="flex items-center gap-0.5 text-[8px] leading-tight truncate" style={{color:sectionColorOf(sections,e.sectionId)}}>
+                    <span className="w-1 h-1 rounded-full flex-shrink-0" style={{background:sectionColorOf(sections,e.sectionId)}}/>
+                    <span className="truncate">{e.title}</span>
+                  </div>
+                ))}
+                {dayEvents.length>2&&<p className="text-[8px] text-gray-400">+{dayEvents.length-2}</p>}
               </div>
             </div>
           );
@@ -553,18 +571,18 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
       {/* ── 다가오는 행사 ── */}
       {events&&events.filter(e=>e.date>=todayStr()).length>0&&(
         <section className="py-20 bg-white">
-          <div className="max-w-5xl mx-auto px-6">
+          <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-10">
               <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">EVENTS</p>
               <h2 className="text-3xl font-bold text-gray-900 font-jua">다가오는 행사</h2>
             </div>
-            <div className="grid md:grid-cols-[300px_1fr] gap-6 items-start">
-              <MiniCalendar events={events}/>
+            <div className="grid md:grid-cols-[1fr_260px] gap-6 items-start">
+              <MiniCalendar events={events} sections={sections}/>
               <div className="space-y-2.5">
                 {events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(e=>(
                   <div key={e.id} className="flex items-center gap-3 bg-[#faf7f2] rounded-xl p-3">
-                    <div className="w-11 h-11 rounded-lg bg-[#1a1a1a] text-white flex flex-col items-center justify-center flex-shrink-0">
-                      <span className="text-[9px] leading-none opacity-70">{e.date.slice(5,7)}월</span>
+                    <div className="w-11 h-11 rounded-lg text-white flex flex-col items-center justify-center flex-shrink-0" style={{background:sectionColorOf(sections,e.sectionId)}}>
+                      <span className="text-[9px] leading-none opacity-80">{e.date.slice(5,7)}월</span>
                       <span className="text-base font-bold leading-none">{e.date.slice(8,10)}</span>
                     </div>
                     <div className="flex-1 min-w-0"><p className="font-bold text-gray-900 text-sm truncate">{e.title}</p>{e.desc&&<p className="text-xs text-gray-500 mt-0.5 truncate">{e.desc}</p>}</div>
@@ -789,7 +807,7 @@ const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,s
             {page==='birthday'&&<MPBirthday students={students} classes={classes}/>}
             {page==='teachers'&&<MPTeachers teachers={teachers} setTeachers={setTeachers} students={students} classes={classes} sections={sections}/>}
             {page==='meetings'&&<MPMeetings meetings={meetings} setMeetings={setMeetings} classes={classes}/>}
-            {page==='events'&&<MPEvents events={events} setEvents={setEvents}/>}
+            {page==='events'&&<MPEvents events={events} setEvents={setEvents} sections={sections}/>}
             {page==='photos'&&<MPPhotos photos={photos} setPhotos={setPhotos} sections={sections}/>}
             {page==='prayers'&&<MPPrayers prayers={prayers} setPrayers={setPrayers}/>}
             {page==='admin'&&<MPAdmin site={site} setSite={setSite} sections={sections} setSections={setSections} classes={classes} setClasses={setClasses} teachers={teachers} students={students} accounts={accounts} setAccounts={setAccounts}/>}
@@ -1224,29 +1242,39 @@ const MPMeetings=({meetings,setMeetings,classes})=>{
   </div>;
 };
 
-const MPEvents=({events,setEvents})=>{
+const MPEvents=({events,setEvents,sections})=>{
   const [showAdd,setShowAdd]=useState(false),[editE,setEditE]=useState(null);
   const sorted=[...events].sort((a,b)=>a.date.localeCompare(b.date));
   const upcoming=sorted.filter(e=>e.date>=todayStr());
   const past=sorted.filter(e=>e.date<todayStr()).reverse();
+  const getSec=id=>sections.find(s=>s.id===id);
   const EForm=({initial,onSave,onClose})=>{
-    const [f,setF]=useState(initial||{title:'',date:todayStr(),desc:''});
+    const [f,setF]=useState(initial||{title:'',date:todayStr(),desc:'',sectionId:'all'});
     const set=(k,v)=>setF(p=>({...p,[k]:v}));
-    return <div className="space-y-3"><Inp label="행사명" value={f.title} onChange={v=>set('title',v)} required/><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/><div className="flex flex-col gap-1"><label className="text-sm font-medium text-gray-700">설명</label><textarea value={f.desc} onChange={e=>set('desc',e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm h-20 resize-none outline-none focus:border-[#b8934a]"/></div><div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.title)return alert('행사명 입력');onSave(f);onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">{initial?'수정 완료':'등록'}</button></div></div>;
+    return <div className="space-y-3"><Inp label="행사명" value={f.title} onChange={v=>set('title',v)} required/><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/>
+      <Sel label="담당 부서 (색상 구분)" value={f.sectionId} onChange={v=>set('sectionId',v)} options={[{value:'all',label:'⛪ 전체/공통'},...sections.map(s=>({value:s.id,label:`${s.emoji} ${s.name}`}))]}/>
+      <div className="flex flex-col gap-1"><label className="text-sm font-medium text-gray-700">설명</label><textarea value={f.desc} onChange={e=>set('desc',e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm h-20 resize-none outline-none focus:border-[#b8934a]"/></div><div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.title)return alert('행사명 입력');onSave(f);onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">{initial?'수정 완료':'등록'}</button></div></div>;
   };
-  const Row=({e,faded})=>(
+  const Row=({e,faded})=>{
+    const sec=getSec(e.sectionId);
+    const color=sectionColorOf(sections,e.sectionId);
+    return (
     <div className={`flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100 ${faded?'opacity-60':''}`}>
-      <div className="w-12 h-12 rounded-xl bg-[#b8934a]/10 text-[#b8934a] flex flex-col items-center justify-center flex-shrink-0 font-bold">
-        <span className="text-[10px] leading-none">{e.date.slice(5,7)}월</span>
+      <div className="w-12 h-12 rounded-xl flex flex-col items-center justify-center flex-shrink-0 font-bold text-white" style={{background:color}}>
+        <span className="text-[10px] leading-none opacity-80">{e.date.slice(5,7)}월</span>
         <span className="text-base leading-none">{e.date.slice(8,10)}</span>
       </div>
-      <div className="flex-1 min-w-0"><p className="font-medium text-sm">{e.title}</p>{e.desc&&<p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{e.desc}</p>}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full flex-shrink-0" style={{background:color}}/><p className="font-medium text-sm truncate">{e.title}</p></div>
+        <p className="text-xs text-gray-400 mt-0.5">{sec?`${sec.emoji} ${sec.name}`:'전체/공통'}{e.desc?` · ${e.desc}`:''}</p>
+      </div>
       <div className="flex gap-1.5 flex-shrink-0"><button onClick={()=>setEditE(e)} className="px-2.5 py-1.5 bg-[#b8934a]/10 text-[#b8934a] rounded-lg text-xs hover:bg-[#b8934a]/20">수정</button><button onClick={()=>{if(confirm('삭제?'))mergeArrayWrite('events_v3',setEvents,p=>p.filter(x=>x.id!==e.id));}} className="px-2.5 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs hover:bg-red-100">삭제</button></div>
     </div>
-  );
+    );
+  };
   return <div className="space-y-4">
     <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">📅 행사 안내</h2><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm">+ 행사 등록</button></div>
-    <p className="text-xs text-gray-400">여기 등록한 행사는 홈페이지에 "다가오는 행사"로 표시됩니다.</p>
+    <p className="text-xs text-gray-400">여기 등록한 행사는 홈페이지에 "다가오는 행사"로 표시됩니다. 담당 부서를 지정하면 그 부서 색상으로 캘린더에 표시됩니다.</p>
     <div className="space-y-2">{upcoming.map(e=><Row key={e.id} e={e}/>)}</div>
     {!upcoming.length&&<p className="text-center text-gray-400 py-6 text-sm">등록된 예정 행사가 없습니다.</p>}
     {past.length>0&&<div><p className="text-xs font-semibold text-gray-500 mb-2 mt-2">지난 행사</p><div className="space-y-2">{past.map(e=><Row key={e.id} e={e} faded/>)}</div></div>}
