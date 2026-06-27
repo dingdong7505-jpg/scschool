@@ -364,7 +364,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
             <p className="text-gray-600 leading-relaxed mb-6">교회학교는 아이들이 처음으로 하나님의 사랑을 배우고, 믿음의 공동체 안에서 함께 자라가는 곳입니다. 영유치부부터 청년부까지, 각 나이에 맞는 말씀 교육과 신앙 훈련을 제공합니다.</p>
             <div className="grid grid-cols-2 gap-4">
               {sections.map(sec=>{
-                const cnt=students.filter(s=>DEFAULT_CLASSES.find(c=>c.id===s.classId)?.sectionId===sec.id&&s.active).length;
+                const cnt=students.filter(s=>classes.find(c=>c.id===s.classId)?.sectionId===sec.id&&s.active).length;
                 return (
                   <div key={sec.id} className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm">
                     <span className="text-2xl">{sec.emoji}</span>
