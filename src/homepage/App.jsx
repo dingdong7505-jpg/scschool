@@ -1464,7 +1464,7 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
                   <label className="text-xs font-medium text-gray-600 block mb-1">인증코드</label>
                   <input value={otpCode} onChange={e => { setOtpCode(e.target.value); setErr(''); }}
                     onKeyDown={e => { if (e.key === 'Enter') handleVerifyOtp(); }}
-                    placeholder="6자리 코드" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors tracking-widest text-center" />
+                    placeholder="이메일로 받은 인증코드" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors tracking-widest text-center" />
                 </div>
                 {err && <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{err}</p>}
                 <button onClick={handleVerifyOtp} disabled={otpBusy} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all disabled:opacity-50">{otpBusy ? '확인 중...' : '인증코드 확인'}</button>
