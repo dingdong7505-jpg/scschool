@@ -306,8 +306,8 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
   const byAlbum={}; filteredPhotos.forEach(p=>{ if(!byAlbum[p.album])byAlbum[p.album]=[]; byAlbum[p.album].push(p); });
 
   const heroTc = site.heroTextColor || '#ffffff';
-  const heroOv = (site.heroOverlay != null ? site.heroOverlay : 30) / 100;
-  const heroShadow = '0 2px 12px rgba(0,0,0,0.6)';
+  const heroOv = Math.max(20, site.heroOverlay != null ? site.heroOverlay : 30) / 100;
+  const heroShadow = '0 1px 2px rgba(0,0,0,0.85), 0 4px 16px rgba(0,0,0,0.55)';
 
   return (
     <div className="font-serif">
