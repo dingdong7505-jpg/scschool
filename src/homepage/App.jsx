@@ -2,6 +2,21 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { logLogin, fetchSharedState, pushSharedState, sendOtp, verifyOtp } from '../supabaseClient.js';
 
+// 여러 사람이 동시에 같은 목록(학생/사진 등)을 고칠 때 서로 덮어쓰지 않도록,
+// 저장 직전 서버의 최신 값을 받아와 이번 변경(mutate)만 적용해서 다시 올린다.
+const mergeArrayWrite = async (key, setLocal, mutate) => {
+  setLocal(prev => mutate(prev));
+  try {
+    const remote = await fetchSharedState(key);
+    const base = remote || [];
+    const merged = mutate(base);
+    setLocal(merged);
+    await pushSharedState(key, merged);
+  } catch (e) {
+    console.warn('merge write failed', key, e);
+  }
+};
+
 const resizeImage = (file, maxDim = 800, quality = 0.8) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = e => {
@@ -973,15 +988,15 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
             <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm cursor-pointer transition-all" onClick={()=>setDetailSt(s)}>
               <div onClick={s.photo?e=>{e.stopPropagation();setPhotoLb(s.photo);}:undefined} className={`w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center font-bold text-white text-sm flex-shrink-0 ${s.photo?'cursor-zoom-in':''}`} style={{background:s.active?'linear-gradient(135deg,#b8934a,#d4aa6e)':'#d1d5db'}}>{s.photo?<img src={s.photo} alt="" className="w-full h-full object-cover"/>:s.name[0]}</div>
               <div className="flex-1 min-w-0"><div className="flex items-center gap-1.5"><span className="font-medium text-sm">{s.name}</span>{s.gender&&<span className="text-xs text-gray-400">({s.gender})</span>}{isThisWeek(s.birthDate)&&'🎂'}{!s.active&&<span className="text-xs bg-red-100 text-red-500 px-1.5 rounded-full">제적</span>}</div><p className="text-xs text-gray-400">{s.grade}{s.birthDate&&` · ${getBMMDD(s.birthDate)}`}</p></div>
-              <div className="flex gap-1"><button onClick={e=>{e.stopPropagation();setEditSt(s);}} className="p-1.5 hover:bg-[#b8934a]/10 rounded-lg text-[#b8934a] text-sm">✏️</button><button onClick={e=>{e.stopPropagation();if(confirm('삭제?'))setStudents(p=>p.filter(x=>x.id!==s.id));}} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 text-sm">🗑</button></div>
+              <div className="flex gap-1"><button onClick={e=>{e.stopPropagation();setEditSt(s);}} className="p-1.5 hover:bg-[#b8934a]/10 rounded-lg text-[#b8934a] text-sm">✏️</button><button onClick={e=>{e.stopPropagation();if(confirm('삭제?'))mergeArrayWrite('students_v3',setStudents,p=>p.filter(x=>x.id!==s.id));}} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 text-sm">🗑</button></div>
             </div>
           ))}
         </div>
       </div>
     ))}
     {!filtered.length&&<p className="text-center text-gray-400 py-12 text-sm">검색 결과 없음</p>}
-    {showAdd&&<Modal title="학생 추가" onClose={()=>setShowAdd(false)}><StForm onSave={f=>setStudents(p=>[...p,{...f,id:nextId(p)}])} onClose={()=>setShowAdd(false)}/></Modal>}
-    {editSt&&<Modal title="학생 수정" onClose={()=>setEditSt(null)}><StForm initial={editSt} onSave={f=>setStudents(p=>p.map(s=>s.id===f.id?f:s))} onClose={()=>setEditSt(null)}/></Modal>}
+    {showAdd&&<Modal title="학생 추가" onClose={()=>setShowAdd(false)}><StForm onSave={f=>mergeArrayWrite('students_v3',setStudents,p=>[...p,{...f,id:nextId(p)}])} onClose={()=>setShowAdd(false)}/></Modal>}
+    {editSt&&<Modal title="학생 수정" onClose={()=>setEditSt(null)}><StForm initial={editSt} onSave={f=>mergeArrayWrite('students_v3',setStudents,p=>p.map(s=>s.id===f.id?f:s))} onClose={()=>setEditSt(null)}/></Modal>}
     {detailSt&&<Modal title="학생 상세" onClose={()=>setDetailSt(null)} wide><StDetail s={detailSt}/></Modal>}
     {photoLb&&<div className="fixed inset-0 bg-black/80 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setPhotoLb('')}><button className="absolute top-4 right-4 text-white text-2xl">✕</button><img src={photoLb} alt="" className="max-w-full max-h-[80vh] rounded-xl object-contain" onClick={e=>e.stopPropagation()}/></div>}
   </div>;
@@ -1106,8 +1121,8 @@ const MPPhotos=({photos,setPhotos,sections})=>{
     <div className="flex gap-2 overflow-x-auto pb-1"><button onClick={()=>setSelSec('all')} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${selSec==='all'?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>전체</button>{sections.map(s=><button key={s.id} onClick={()=>setSelSec(s.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${selSec===s.id?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>{s.emoji} {s.name}</button>)}</div>
     {Object.entries(byAlbum).map(([album,ps])=><div key={album}><p className="text-sm font-semibold text-gray-700 mb-2">{album} <span className="text-gray-400 font-normal">({ps.length}장)</span></p><div className="grid grid-cols-3 gap-2">{ps.map((p,i)=><div key={p.id} onClick={()=>setLb(p)} className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity relative">{p.src?<img src={p.src} alt="" className="w-full h-full object-cover"/>:<span className="text-3xl">{EMOJIS[i%EMOJIS.length]}</span>}{p.visibility==='member'&&<span className="absolute top-1 right-1 bg-black/60 text-white text-[10px] rounded-full px-1.5 py-0.5">🔒 회원</span>}</div>)}</div></div>)}
     {!filtered.length&&<p className="text-center text-gray-400 py-8 text-sm">사진 없음</p>}
-    {showAdd&&<Modal title="사진 추가" onClose={()=>setShowAdd(false)}><AddForm onSave={p=>setPhotos(pv=>[...pv,{...p,id:nextId(pv)}])} onClose={()=>setShowAdd(false)}/></Modal>}
-    {lb&&<div className="fixed inset-0 bg-black/80 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setLb(null)}><button className="absolute top-4 right-4 text-white text-2xl">✕</button>{lb.src?<img src={lb.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain" onClick={e=>e.stopPropagation()}/>:<div className="w-48 h-48 bg-gray-800 rounded-xl flex items-center justify-center text-5xl">🖼️</div>}{lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}<div className="flex gap-2 mt-4">{lb.src&&<button onClick={e=>{e.stopPropagation();downloadDataUrl(lb.src,`${lb.album||'photo'}.jpg`);}} className="px-5 py-2.5 bg-white text-[#1a1a1a] rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">⬇ 다운로드</button>}<button onClick={e=>{e.stopPropagation();if(confirm('이 사진을 삭제할까요?')){setPhotos(pv=>pv.filter(x=>x.id!==lb.id));setLb(null);}}} className="px-5 py-2.5 bg-red-500 text-white rounded-full text-sm font-semibold hover:bg-red-600 transition-all">🗑 삭제</button></div></div>}
+    {showAdd&&<Modal title="사진 추가" onClose={()=>setShowAdd(false)}><AddForm onSave={p=>mergeArrayWrite('photos_v3',setPhotos,pv=>[...pv,{...p,id:nextId(pv)}])} onClose={()=>setShowAdd(false)}/></Modal>}
+    {lb&&<div className="fixed inset-0 bg-black/80 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setLb(null)}><button className="absolute top-4 right-4 text-white text-2xl">✕</button>{lb.src?<img src={lb.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain" onClick={e=>e.stopPropagation()}/>:<div className="w-48 h-48 bg-gray-800 rounded-xl flex items-center justify-center text-5xl">🖼️</div>}{lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}<div className="flex gap-2 mt-4">{lb.src&&<button onClick={e=>{e.stopPropagation();downloadDataUrl(lb.src,`${lb.album||'photo'}.jpg`);}} className="px-5 py-2.5 bg-white text-[#1a1a1a] rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">⬇ 다운로드</button>}<button onClick={e=>{e.stopPropagation();if(confirm('이 사진을 삭제할까요?')){mergeArrayWrite('photos_v3',setPhotos,pv=>pv.filter(x=>x.id!==lb.id));setLb(null);}}} className="px-5 py-2.5 bg-red-500 text-white rounded-full text-sm font-semibold hover:bg-red-600 transition-all">🗑 삭제</button></div></div>}
   </div>;
 };
 
