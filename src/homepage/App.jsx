@@ -260,7 +260,7 @@ const Sel=({label,value,onChange,options})=>(
 
 
 // ── 공개 홈페이지 ─────────────────────────────────────────
-const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,authUser,onRequestDownload,onRequestLogin})=>{
+const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenManage,authUser,onRequestDownload,onRequestLogin})=>{
   const [scrolled,setScrolled]=useState(false);
   const [activeSec,setActiveSec]=useState(null); // null = 전체
   const [mobileMenu,setMobileMenu]=useState(false);
@@ -516,6 +516,29 @@ const Homepage=({site,sections,classes,students,photos,prayers,onOpenManage,auth
         );
       })()}
 
+      {/* ── 다가오는 행사 ── */}
+      {events&&events.filter(e=>e.date>=todayStr()).length>0&&(
+        <section className="py-20 bg-white">
+          <div className="max-w-4xl mx-auto px-6">
+            <div className="text-center mb-10">
+              <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">EVENTS</p>
+              <h2 className="text-3xl font-bold text-gray-900 font-jua">다가오는 행사</h2>
+            </div>
+            <div className="space-y-3">
+              {events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5).map(e=>(
+                <div key={e.id} className="flex items-center gap-4 bg-[#faf7f2] rounded-2xl p-4">
+                  <div className="w-14 h-14 rounded-xl bg-[#1a1a1a] text-white flex flex-col items-center justify-center flex-shrink-0">
+                    <span className="text-[10px] leading-none opacity-70">{e.date.slice(5,7)}월</span>
+                    <span className="text-xl font-bold leading-none">{e.date.slice(8,10)}</span>
+                  </div>
+                  <div className="flex-1"><p className="font-bold text-gray-900">{e.title}</p>{e.desc&&<p className="text-sm text-gray-500 mt-0.5">{e.desc}</p>}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ── 이번 주 생일 + 기도제목 ── */}
       <section className="py-24" style={{background:'#faf7f2'}}>
         <div className="max-w-5xl mx-auto px-6 grid md:grid-cols-2 gap-12">
@@ -662,7 +685,7 @@ const PrayerFormModal=({onClose})=>{
 };
 
 // ── 교사 관리 패널 (슬라이드 드로어) ─────────────────────
-const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,setSections,classes,setClasses,students,setStudents,teachers,setTeachers,attendance,setAttendance,meetings,setMeetings,photos,setPhotos,prayers,setPrayers,accounts,setAccounts})=>{
+const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,setSections,classes,setClasses,students,setStudents,teachers,setTeachers,attendance,setAttendance,meetings,setMeetings,events,setEvents,photos,setPhotos,prayers,setPrayers,accounts,setAccounts})=>{
   const [page,setPage]=useState('dashboard');
   const [selSec,setSelSec]=useState(null); // 섹션 필터
 
@@ -679,6 +702,7 @@ const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,s
     {id:'birthday',l:'생일',e:'🎂'},
     {id:'teachers',l:'선생님',e:'👨‍🏫'},
     {id:'meetings',l:'회의자료',e:'📄'},
+    {id:'events',l:'행사',e:'📅'},
     {id:'photos',l:'사진',e:'📸'},
     {id:'prayers',l:'기도제목',e:'🙏'},
     {id:'admin',l:'관리자',e:'⚙️'},
@@ -727,7 +751,8 @@ const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,s
             {page==='stats'&&<MPStats students={students} classes={classes} sections={sections} attendance={attendance}/>}
             {page==='birthday'&&<MPBirthday students={students} classes={classes}/>}
             {page==='teachers'&&<MPTeachers teachers={teachers} setTeachers={setTeachers} students={students} classes={classes} sections={sections}/>}
-            {page==='meetings'&&<MPMeetings meetings={meetings} setMeetings={setMeetings}/>}
+            {page==='meetings'&&<MPMeetings meetings={meetings} setMeetings={setMeetings} classes={classes}/>}
+            {page==='events'&&<MPEvents events={events} setEvents={setEvents}/>}
             {page==='photos'&&<MPPhotos photos={photos} setPhotos={setPhotos} sections={sections}/>}
             {page==='prayers'&&<MPPrayers prayers={prayers} setPrayers={setPrayers}/>}
             {page==='admin'&&<MPAdmin site={site} setSite={setSite} sections={sections} setSections={setSections} classes={classes} setClasses={setClasses} teachers={teachers} students={students} accounts={accounts} setAccounts={setAccounts}/>}
@@ -974,8 +999,46 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
     exportXLSX(rows,`교적부_${todayStr()}.xlsx`,'교적부');
   };
 
+  const importStudents=async e=>{
+    const file=e.target.files[0];e.target.value='';
+    if(!file)return;
+    try{
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      if(!rows.length)return alert('읽을 데이터가 없습니다. (이름, 반, 학년, 성별, 생년월일, 학생연락처, 부모님연락처, 주소, 메모 컬럼을 인식합니다)');
+      const newStudents=rows.map(r=>{
+        const clsName=String(r['반']||'').trim();
+        const cls=classes.find(c=>c.name===clsName);
+        return {
+          name:String(r['이름']||'').trim(),
+          classId:cls?.id||classes[0]?.id||'',
+          grade:String(r['학년']||''),
+          gender:String(r['성별']||''),
+          birthDate:r['생년월일']?String(r['생년월일']):'',
+          phone:String(r['학생연락처']||''),
+          parentPhone:String(r['부모님연락처']||''),
+          address:String(r['주소']||''),
+          registeredDate:r['등록일']?String(r['등록일']):todayStr(),
+          active:String(r['재적여부']||'재적')!=='제적',
+          memo:String(r['메모']||''),
+        };
+      }).filter(s=>s.name);
+      if(!newStudents.length)return alert('"이름" 컬럼이 있는 행이 없습니다.');
+      if(!confirm(`${newStudents.length}명을 교적부에 추가할까요?`))return;
+      mergeArrayWrite('students_v3',setStudents,p=>{
+        let nid=nextId(p);
+        return [...p,...newStudents.map(s=>({...s,id:nid++}))];
+      });
+      alert(`${newStudents.length}명이 추가되었습니다.`);
+    }catch(err){ alert('엑셀 파일을 읽지 못했습니다. 형식을 확인해주세요.'); console.warn(err); }
+  };
+
   return <div className="space-y-4">
-    <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">교적부</h2><div className="flex gap-2"><button onClick={exportStudents} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-xl text-sm font-medium hover:bg-[#2d5240]">⬇ 엑셀 다운로드</button><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333]">+ 학생 추가</button></div></div>
+    <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">교적부</h2><div className="flex gap-2">
+      <label className="px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 cursor-pointer">⬆ 엑셀 업로드<input type="file" accept=".xlsx,.xls,.csv" onChange={importStudents} className="hidden"/></label>
+      <button onClick={exportStudents} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-xl text-sm font-medium hover:bg-[#2d5240]">⬇ 엑셀 다운로드</button><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333]">+ 학생 추가</button></div></div>
+    <p className="text-xs text-gray-400">엑셀 업로드 형식: 엑셀 다운로드한 파일과 같은 컬럼(이름, 반, 학년, 성별, 생년월일, 학생연락처, 부모님연락처, 주소, 등록일, 재적여부, 메모). "반" 이름은 기존 반 이름과 정확히 일치해야 자동으로 배정됩니다.</p>
     <div className="flex gap-2 overflow-x-auto pb-1">
       {['전체',...sections.map(s=>s.name)].map(n=><button key={n} onClick={()=>setFSec(n)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${fSec===n?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{n}</button>)}
     </div>
@@ -1041,6 +1104,19 @@ const MPStats=({students,classes,sections,attendance})=>{
         return <div key={sec.id} className="mb-2"><div className="flex justify-between text-xs mb-1"><span className="font-medium">{sec.emoji} {sec.name} ({ss.length}명)</span><span className="font-bold text-[#b8934a]">{rate}%</span></div><div className="h-2 bg-gray-200 rounded-full overflow-hidden"><div className="h-full rounded-full bg-[#b8934a] transition-all" style={{width:`${rate}%`}}/></div></div>;
       })}
     </div>
+    <div className="bg-gray-50 rounded-2xl p-4">
+      <h3 className="font-semibold text-gray-800 mb-3 text-sm">⚠️ 최근 결석이 잦은 학생</h3>
+      {(()=>{
+        const recentDates=Object.keys(attendance).sort((a,b)=>b.localeCompare(a)).slice(0,4);
+        const atRisk=active.map(s=>{
+          const recs=recentDates.map(d=>attendance[d]?.[s.id]).filter(Boolean);
+          const absences=recs.filter(st=>st==='결석').length;
+          return {s,absences,total:recs.length};
+        }).filter(x=>x.absences>=2).sort((a,b)=>b.absences-a.absences);
+        if(!atRisk.length)return <p className="text-xs text-gray-400">최근 4회 출석 기록 중 결석이 2회 이상인 학생이 없습니다.</p>;
+        return <div className="space-y-1.5">{atRisk.map(({s,absences,total})=>{const cls=classes.find(c=>c.id===s.classId);return <div key={s.id} className="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-red-100"><span className="text-sm font-medium">{s.name} <span className="text-xs text-gray-400">{cls?.name}</span></span><span className="text-xs font-bold text-red-500">최근 {total}회 중 결석 {absences}회</span></div>;})}</div>;
+      })()}
+    </div>
   </div>;
 };
 
@@ -1078,15 +1154,18 @@ const MPTeachers=({teachers,setTeachers,students,classes,sections})=>{
   </div>;
 };
 
-const MPMeetings=({meetings,setMeetings})=>{
-  const [showAdd,setShowAdd]=useState(false),[detail,setDetail]=useState(null);
-  const CATS=['회의록','공지','교육자료','기타'];
-  const sorted=[...meetings].sort((a,b)=>b.date.localeCompare(a.date));
+const MPMeetings=({meetings,setMeetings,classes})=>{
+  const [showAdd,setShowAdd]=useState(false),[detail,setDetail]=useState(null),[filterCls,setFilterCls]=useState('all');
+  const CATS=['공과','회의록','공지','교육자료','기타'];
+  const getClsName=id=>classes.find(c=>c.id===id)?.name;
+  const sorted=[...meetings].filter(m=>filterCls==='all'||m.classId===filterCls).sort((a,b)=>b.date.localeCompare(a.date));
   const DocForm=({onSave,onClose})=>{
-    const [f,setF]=useState({title:'',date:todayStr(),uploader:'',category:'회의록',content:'',fileName:'',fileData:''});
+    const [f,setF]=useState({title:'',date:todayStr(),uploader:'',category:'공과',classId:'all',content:'',fileName:'',fileData:''});
     const set=(k,v)=>setF(p=>({...p,[k]:v}));
     const handleFile=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setF(p=>({...p,fileName:file.name,fileData:ev.target.result}));r.readAsDataURL(file);};
-    return <div className="space-y-3"><Inp label="제목" value={f.title} onChange={v=>set('title',v)} required/><div className="grid grid-cols-2 gap-3"><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/><Sel label="카테고리" value={f.category} onChange={v=>set('category',v)} options={CATS}/></div><Inp label="작성자" value={f.uploader} onChange={v=>set('uploader',v)}/>
+    return <div className="space-y-3"><Inp label="제목" value={f.title} onChange={v=>set('title',v)} required/><div className="grid grid-cols-2 gap-3"><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/><Sel label="카테고리" value={f.category} onChange={v=>set('category',v)} options={CATS}/></div>
+      <Sel label="대상 반 (공과용)" value={f.classId} onChange={v=>set('classId',v)} options={[{value:'all',label:'전체/공통'},...classes.map(c=>({value:c.id,label:c.name}))]}/>
+      <Inp label="작성자" value={f.uploader} onChange={v=>set('uploader',v)}/>
       <div><label className="text-sm font-medium text-gray-700 block mb-1">파일 첨부 (PDF, 문서, 이미지 등)</label><input type="file" onChange={handleFile} className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-gray-100 file:text-gray-700"/>{f.fileName&&<p className="text-xs text-green-600 mt-1">✓ {f.fileName}</p>}</div>
       <div className="flex flex-col gap-1"><label className="text-sm font-medium text-gray-700">내용 (파일 없을 때 텍스트로 기록)</label><textarea value={f.content} onChange={e=>set('content',e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm h-24 resize-none outline-none focus:border-[#b8934a]"/></div>
       <div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.title)return alert('제목 입력');onSave(f);onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">저장</button></div></div>;
@@ -1096,10 +1175,46 @@ const MPMeetings=({meetings,setMeetings})=>{
     const b=new Blob([`${m.title}\n${m.date}\n${m.uploader}\n\n${m.content}`],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${m.title}.txt`;a.click();
   };
   return <div className="space-y-4">
-    <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">회의자료</h2><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm">+ 자료 추가</button></div>
-    <div className="space-y-2">{sorted.map(m=><div key={m.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100 hover:shadow-sm transition-all"><div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-lg shadow-sm flex-shrink-0">📄</div><div className="flex-1 min-w-0 cursor-pointer" onClick={()=>setDetail(m)}><p className="font-medium text-sm">{m.title}</p><p className="text-xs text-gray-400">{fmt(m.date)} · {m.uploader}</p></div><div className="flex items-center gap-1 flex-shrink-0"><span className="text-xs bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">{m.category}</span><button onClick={()=>download(m)} className="p-1.5 text-[#b8934a] hover:bg-[#b8934a]/10 rounded text-sm">⬇</button><button onClick={()=>{if(confirm('삭제?'))mergeArrayWrite('meetings_v3',setMeetings,p=>p.filter(x=>x.id!==m.id));}} className="p-1.5 text-red-400 hover:bg-red-50 rounded text-sm">🗑</button></div></div>)}</div>
+    <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">회의자료 · 공과</h2><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm">+ 자료 추가</button></div>
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      <button onClick={()=>setFilterCls('all')} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${filterCls==='all'?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>전체</button>
+      {classes.map(c=><button key={c.id} onClick={()=>setFilterCls(c.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${filterCls===c.id?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>{c.name}</button>)}
+    </div>
+    <div className="space-y-2">{sorted.map(m=><div key={m.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100 hover:shadow-sm transition-all"><div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-lg shadow-sm flex-shrink-0">{m.category==='공과'?'📖':'📄'}</div><div className="flex-1 min-w-0 cursor-pointer" onClick={()=>setDetail(m)}><p className="font-medium text-sm">{m.title}</p><p className="text-xs text-gray-400">{fmt(m.date)} · {m.uploader}{m.classId&&m.classId!=='all'&&getClsName(m.classId)?` · ${getClsName(m.classId)}`:''}</p></div><div className="flex items-center gap-1 flex-shrink-0"><span className="text-xs bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">{m.category}</span><button onClick={()=>download(m)} className="p-1.5 text-[#b8934a] hover:bg-[#b8934a]/10 rounded text-sm">⬇</button><button onClick={()=>{if(confirm('삭제?'))mergeArrayWrite('meetings_v3',setMeetings,p=>p.filter(x=>x.id!==m.id));}} className="p-1.5 text-red-400 hover:bg-red-50 rounded text-sm">🗑</button></div></div>)}</div>
+    {!sorted.length&&<p className="text-center text-gray-400 py-8 text-sm">자료가 없습니다.</p>}
     {showAdd&&<Modal title="자료 추가" onClose={()=>setShowAdd(false)} wide><DocForm onSave={m=>mergeArrayWrite('meetings_v3',setMeetings,p=>[...p,{...m,id:nextId(p)}])} onClose={()=>setShowAdd(false)}/></Modal>}
-    {detail&&<Modal title={detail.title} onClose={()=>setDetail(null)} wide><div className="space-y-3"><div className="flex gap-2 text-xs"><span className="text-gray-500">{fmt(detail.date)}</span><span className="text-gray-300">·</span><span className="text-gray-500">{detail.uploader}</span><span className="bg-gray-100 text-gray-600 rounded-full px-2">{detail.category}</span></div><div className="bg-gray-50 rounded-xl p-4 text-sm whitespace-pre-wrap min-h-20">{detail.content}</div><div className="flex gap-2"><button onClick={()=>setDetail(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">닫기</button><button onClick={()=>download(detail)} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">⬇ 다운로드</button></div></div></Modal>}
+    {detail&&<Modal title={detail.title} onClose={()=>setDetail(null)} wide><div className="space-y-3"><div className="flex gap-2 text-xs flex-wrap"><span className="text-gray-500">{fmt(detail.date)}</span><span className="text-gray-300">·</span><span className="text-gray-500">{detail.uploader}</span><span className="bg-gray-100 text-gray-600 rounded-full px-2">{detail.category}</span>{detail.classId&&detail.classId!=='all'&&getClsName(detail.classId)&&<span className="bg-[#b8934a]/10 text-[#b8934a] rounded-full px-2">{getClsName(detail.classId)}</span>}</div><div className="bg-gray-50 rounded-xl p-4 text-sm whitespace-pre-wrap min-h-20">{detail.content}</div><div className="flex gap-2"><button onClick={()=>setDetail(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">닫기</button><button onClick={()=>download(detail)} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">⬇ 다운로드</button></div></div></Modal>}
+  </div>;
+};
+
+const MPEvents=({events,setEvents})=>{
+  const [showAdd,setShowAdd]=useState(false),[editE,setEditE]=useState(null);
+  const sorted=[...events].sort((a,b)=>a.date.localeCompare(b.date));
+  const upcoming=sorted.filter(e=>e.date>=todayStr());
+  const past=sorted.filter(e=>e.date<todayStr()).reverse();
+  const EForm=({initial,onSave,onClose})=>{
+    const [f,setF]=useState(initial||{title:'',date:todayStr(),desc:''});
+    const set=(k,v)=>setF(p=>({...p,[k]:v}));
+    return <div className="space-y-3"><Inp label="행사명" value={f.title} onChange={v=>set('title',v)} required/><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/><div className="flex flex-col gap-1"><label className="text-sm font-medium text-gray-700">설명</label><textarea value={f.desc} onChange={e=>set('desc',e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm h-20 resize-none outline-none focus:border-[#b8934a]"/></div><div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.title)return alert('행사명 입력');onSave(f);onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">{initial?'수정 완료':'등록'}</button></div></div>;
+  };
+  const Row=({e,faded})=>(
+    <div className={`flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100 ${faded?'opacity-60':''}`}>
+      <div className="w-12 h-12 rounded-xl bg-[#b8934a]/10 text-[#b8934a] flex flex-col items-center justify-center flex-shrink-0 font-bold">
+        <span className="text-[10px] leading-none">{e.date.slice(5,7)}월</span>
+        <span className="text-base leading-none">{e.date.slice(8,10)}</span>
+      </div>
+      <div className="flex-1 min-w-0"><p className="font-medium text-sm">{e.title}</p>{e.desc&&<p className="text-xs text-gray-400 line-clamp-2 mt-0.5">{e.desc}</p>}</div>
+      <div className="flex gap-1.5 flex-shrink-0"><button onClick={()=>setEditE(e)} className="px-2.5 py-1.5 bg-[#b8934a]/10 text-[#b8934a] rounded-lg text-xs hover:bg-[#b8934a]/20">수정</button><button onClick={()=>{if(confirm('삭제?'))mergeArrayWrite('events_v3',setEvents,p=>p.filter(x=>x.id!==e.id));}} className="px-2.5 py-1.5 bg-red-50 text-red-500 rounded-lg text-xs hover:bg-red-100">삭제</button></div>
+    </div>
+  );
+  return <div className="space-y-4">
+    <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">📅 행사 안내</h2><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm">+ 행사 등록</button></div>
+    <p className="text-xs text-gray-400">여기 등록한 행사는 홈페이지에 "다가오는 행사"로 표시됩니다.</p>
+    <div className="space-y-2">{upcoming.map(e=><Row key={e.id} e={e}/>)}</div>
+    {!upcoming.length&&<p className="text-center text-gray-400 py-6 text-sm">등록된 예정 행사가 없습니다.</p>}
+    {past.length>0&&<div><p className="text-xs font-semibold text-gray-500 mb-2 mt-2">지난 행사</p><div className="space-y-2">{past.map(e=><Row key={e.id} e={e} faded/>)}</div></div>}
+    {showAdd&&<Modal title="행사 등록" onClose={()=>setShowAdd(false)}><EForm onSave={f=>mergeArrayWrite('events_v3',setEvents,p=>[...p,{...f,id:nextId(p)}])} onClose={()=>setShowAdd(false)}/></Modal>}
+    {editE&&<Modal title="행사 수정" onClose={()=>setEditE(null)}><EForm initial={editE} onSave={f=>mergeArrayWrite('events_v3',setEvents,p=>p.map(x=>x.id===editE.id?{...x,...f}:x))} onClose={()=>setEditE(null)}/></Modal>}
   </div>;
 };
 
@@ -1554,6 +1669,7 @@ const App = () => {
   const [teachers, setTeachers] = useLS('teachers_v3', INITIAL_TEACHERS);
   const [attendance, setAttendance] = useLS('attendance_v3', genAttendance(INITIAL_STUDENTS));
   const [meetings, setMeetings] = useLS('meetings_v3', INITIAL_MEETINGS);
+  const [events, setEvents] = useLS('events_v3', []);
   const [photos, setPhotos] = useLS('photos_v3', INITIAL_PHOTOS);
   const [prayers, setPrayers] = useLS('prayers_v3', INITIAL_PRAYERS);
   const [accounts, setAccounts] = useLS('accounts_v3', []);
@@ -1602,7 +1718,7 @@ const App = () => {
 
       <Homepage
         site={site} sections={sections} classes={classes} students={students}
-        prayers={prayers} setPrayers={setPrayers} photos={photos}
+        prayers={prayers} setPrayers={setPrayers} photos={photos} events={events}
         onOpenManage={handleTeacherBtn} authUser={authUser} onRequestDownload={handleRequestDownload} onRequestLogin={handleRequestLogin}
       />
 
@@ -1652,6 +1768,7 @@ const App = () => {
           teachers={teachers} setTeachers={setTeachers}
           attendance={attendance} setAttendance={setAttendance}
           meetings={meetings} setMeetings={setMeetings}
+          events={events} setEvents={setEvents}
           photos={photos} setPhotos={setPhotos}
           prayers={prayers} setPrayers={setPrayers}
           accounts={accounts} setAccounts={setAccounts}
