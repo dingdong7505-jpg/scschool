@@ -1340,7 +1340,26 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
   const [tab, setTab] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', password2: '', wantsTeacher: false });
   const [err, setErr] = useState('');
-  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErr(''); };
+  const [msg, setMsg] = useState('');
+  const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErr(''); setMsg(''); };
+
+  const [resetStep, setResetStep] = useState('email');
+  const [resetAcc, setResetAcc] = useState(null);
+  const [resetPw, setResetPw] = useState({ pw: '', pw2: '' });
+
+  const handleFindAccount = () => {
+    const acc = accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase());
+    if (!acc) { setErr('등록되지 않은 이메일입니다.'); return; }
+    setResetAcc(acc); setResetStep('newpass'); setErr('');
+  };
+  const handleResetPassword = () => {
+    if (resetPw.pw.length < 6) { setErr('비밀번호는 6자 이상이어야 합니다.'); return; }
+    if (resetPw.pw !== resetPw.pw2) { setErr('비밀번호가 일치하지 않습니다.'); return; }
+    setAccounts(p => p.map(a => a.id === resetAcc.id ? { ...a, passwordHash: hashPw(resetPw.pw) } : a));
+    setTab('login'); setResetStep('email'); setResetAcc(null); setResetPw({ pw: '', pw2: '' });
+    setForm(f => ({ ...f, password: '' }));
+    setMsg('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.');
+  };
 
   const gRef = React.useRef();
   useEffect(() => {
@@ -1398,16 +1417,58 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
           </div>
         )}
 
-        <div className={`flex gap-1 px-6 ${site.googleClientId ? 'pt-0' : 'pt-5'}`}>
-          {['login', 'signup'].map(t => (
-            <button key={t} onClick={() => { setTab(t); setErr(''); setForm({ name: '', email: '', password: '', password2: '', wantsTeacher: false }); }}
-              className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${tab === t ? 'bg-[#1a1a1a] text-white' : 'text-gray-400 hover:text-gray-700'}`}>
-              {t === 'login' ? '로그인' : '회원가입'}
-            </button>
-          ))}
-        </div>
+        {tab !== 'reset' && (
+          <div className={`flex gap-1 px-6 ${site.googleClientId ? 'pt-0' : 'pt-5'}`}>
+            {['login', 'signup'].map(t => (
+              <button key={t} onClick={() => { setTab(t); setErr(''); setMsg(''); setForm({ name: '', email: '', password: '', password2: '', wantsTeacher: false }); }}
+                className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${tab === t ? 'bg-[#1a1a1a] text-white' : 'text-gray-400 hover:text-gray-700'}`}>
+                {t === 'login' ? '로그인' : '회원가입'}
+              </button>
+            ))}
+          </div>
+        )}
 
-        <div className="px-6 pb-6 pt-4 space-y-3">
+        {tab === 'reset' && (
+          <div className="px-6 pb-6 pt-5 space-y-3">
+            <h3 className="text-sm font-bold text-gray-800">비밀번호 재설정</h3>
+            {resetStep === 'email' ? (
+              <>
+                <p className="text-xs text-gray-500">가입하신 이메일을 입력해주세요. (이메일이 곧 아이디입니다)</p>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">이메일</label>
+                  <input type="email" value={form.email} onChange={e => set('email', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleFindAccount(); }}
+                    placeholder="example@gmail.com" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
+                </div>
+                {err && <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{err}</p>}
+                <button onClick={handleFindAccount} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all">계정 확인</button>
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500">{resetAcc?.name}님, 새 비밀번호를 설정해주세요.</p>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">새 비밀번호 (6자 이상)</label>
+                  <input type="password" value={resetPw.pw} onChange={e => { setResetPw(p => ({ ...p, pw: e.target.value })); setErr(''); }}
+                    placeholder="••••••" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 block mb-1">새 비밀번호 확인</label>
+                  <input type="password" value={resetPw.pw2} onChange={e => { setResetPw(p => ({ ...p, pw2: e.target.value })); setErr(''); }}
+                    onKeyDown={e => { if (e.key === 'Enter') handleResetPassword(); }}
+                    placeholder="••••••" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
+                </div>
+                {err && <p className="text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">{err}</p>}
+                <button onClick={handleResetPassword} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all">비밀번호 변경</button>
+              </>
+            )}
+            <button onClick={() => { setTab('login'); setResetStep('email'); setResetAcc(null); setErr(''); }} className="w-full py-1.5 text-xs text-gray-400 hover:text-gray-600">로그인으로 돌아가기</button>
+          </div>
+        )}
+
+        {tab !== 'reset' && <div className="px-6 pb-6 pt-4 space-y-3">
+          {msg && (
+            <p className="text-xs text-green-600 bg-green-50 rounded-xl px-3 py-2">{msg}</p>
+          )}
           {tab === 'signup' && (
             <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">이름</label>
@@ -1426,6 +1487,9 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
               onKeyDown={e => { if (e.key === 'Enter' && tab === 'login') handleLogin(); }}
               placeholder="••••••" className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] transition-colors" />
           </div>
+          {tab === 'login' && (
+            <button onClick={() => { setTab('reset'); setErr(''); setMsg(''); setResetStep('email'); }} className="text-xs text-gray-400 hover:text-[#b8934a] hover:underline">비밀번호를 잊으셨나요?</button>
+          )}
           {tab === 'signup' && (
             <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">비밀번호 확인</label>
@@ -1451,7 +1515,7 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
           </button>
 
           <button onClick={onClose} className="w-full py-1.5 text-xs text-gray-400 hover:text-gray-600">취소</button>
-        </div>
+        </div>}
       </div>
     </div>
   );
