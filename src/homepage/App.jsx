@@ -1413,6 +1413,15 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
     setMsg('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.');
   };
 
+  const [googleProfile, setGoogleProfile] = useState(null);
+  const finishGoogleSignup = wantsTeacher => {
+    const role = wantsTeacher ? 'teacher_pending' : 'member';
+    const newAcc = { id: nextId(accounts), name: googleProfile.name, email: googleProfile.email, role, provider: 'google' };
+    setAccounts(p => [...p, newAcc]);
+    onSuccess({ name: newAcc.name, email: newAcc.email, picture: googleProfile.picture, provider: 'google', role });
+    setGoogleProfile(null);
+  };
+
   const gRef = React.useRef();
   useEffect(() => {
     if (!site.googleClientId || !window.google || !gRef.current) return;
@@ -1422,7 +1431,12 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
         callback: res => {
           const p = decodeJWT(res.credential);
           if (!p) { setErr('Google 인증 오류'); return; }
-          onSuccess({ name: p.name, email: p.email, picture: p.picture, provider: 'google', role: 'member' });
+          const existing = accounts.find(a => a.email.toLowerCase() === p.email.toLowerCase());
+          if (existing) {
+            onSuccess({ name: existing.name, email: existing.email, picture: p.picture, provider: 'google', role: existing.role || 'member' });
+          } else {
+            setGoogleProfile(p);
+          }
         },
       });
       window.google.accounts.id.renderButton(gRef.current, { theme: 'outline', size: 'large', width: 300, text: 'signin_with', shape: 'pill', locale: 'ko' });
@@ -1469,7 +1483,16 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
           </div>
         )}
 
-        {tab !== 'reset' && (
+        {googleProfile && (
+          <div className="px-6 pb-6 pt-5 space-y-3">
+            <p className="text-sm text-gray-700">{googleProfile.name}님, 첫 로그인이시네요!</p>
+            <p className="text-xs text-gray-500">교사이신가요? 교사로 신청하면 관리자 승인 후 교사 관리 기능을 이용할 수 있어요. 신청하지 않으면 일반 회원으로 가입되어 사진 다운로드만 가능합니다.</p>
+            <button onClick={() => finishGoogleSignup(true)} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all">교사로 신청합니다</button>
+            <button onClick={() => finishGoogleSignup(false)} className="w-full py-2.5 border border-gray-200 rounded-2xl text-sm text-gray-600 hover:bg-gray-50 transition-all">일반 회원으로 계속</button>
+          </div>
+        )}
+
+        {!googleProfile && tab !== 'reset' && (
           <div className={`flex gap-1 px-6 ${site.googleClientId ? 'pt-0' : 'pt-5'}`}>
             {['login', 'signup'].map(t => (
               <button key={t} onClick={() => { setTab(t); setErr(''); setMsg(''); setForm({ name: '', email: '', password: '', password2: '', wantsTeacher: false }); }}
@@ -1530,7 +1553,7 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
           </div>
         )}
 
-        {tab !== 'reset' && <div className="px-6 pb-6 pt-4 space-y-3">
+        {!googleProfile && tab !== 'reset' && <div className="px-6 pb-6 pt-4 space-y-3">
           {msg && (
             <p className="text-xs text-green-600 bg-green-50 rounded-xl px-3 py-2">{msg}</p>
           )}
