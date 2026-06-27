@@ -1048,11 +1048,15 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
     </div>;
   };
 
-  const grouped=useMemo(()=>{
-    const g={};
-    filtered.forEach(s=>{const cls=classes.find(c=>c.id===s.classId);const key=cls?.name||'미배정';if(!g[key])g[key]=[];g[key].push(s);});
-    return g;
-  },[filtered,classes]);
+  const gradeNum=name=>{const m=name.match(/\d+/);return m?parseInt(m[0]):999;};
+  const bySection=useMemo(()=>{
+    return sections.map(sec=>{
+      const secClasses=classes.filter(c=>c.sectionId===sec.id).slice().sort((a,b)=>gradeNum(a.name)-gradeNum(b.name));
+      const classGroups=secClasses.map(cls=>({cls,students:filtered.filter(s=>s.classId===cls.id).slice().sort((a,b)=>gradeNum(a.grade||'')-gradeNum(b.grade||''))})).filter(g=>g.students.length);
+      return {sec,classGroups};
+    }).filter(g=>g.classGroups.length);
+  },[filtered,classes,sections]);
+  const unassignedStudents=useMemo(()=>filtered.filter(s=>!classes.find(c=>c.id===s.classId)),[filtered,classes]);
 
   const exportStudents=()=>{
     if(!students.length)return alert('내보낼 학생이 없습니다.');
@@ -1108,11 +1112,30 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
       {['전체',...sections.map(s=>s.name)].map(n=><button key={n} onClick={()=>setFSec(n)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${fSec===n?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{n}</button>)}
     </div>
     <div className="relative"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="이름 검색..." className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:border-[#b8934a]"/><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span></div>
-    {Object.entries(grouped).map(([clsName,ss])=>(
-      <div key={clsName}>
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{clsName} <span className="font-normal text-gray-400">({ss.filter(s=>s.active).length}명)</span></p>
+    {bySection.map(({sec,classGroups})=>(
+      <div key={sec.id} className="space-y-3">
+        <p className="text-sm font-bold text-gray-800 flex items-center gap-1.5 pt-1">{sec.emoji} {sec.name} <span className="font-normal text-gray-400 text-xs">({classGroups.reduce((n,g)=>n+g.students.filter(s=>s.active).length,0)}명)</span></p>
+        {classGroups.map(({cls,students:ss})=>(
+          <div key={cls.id}>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 pl-1">{cls.name} <span className="font-normal text-gray-400">({ss.filter(s=>s.active).length}명)</span></p>
+            <div className="space-y-2">
+              {ss.map(s=>(
+                <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm cursor-pointer transition-all" onClick={()=>setDetailSt(s)}>
+                  <div onClick={s.photo?e=>{e.stopPropagation();setPhotoLb(s.photo);}:undefined} className={`w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center font-bold text-white text-sm flex-shrink-0 ${s.photo?'cursor-zoom-in':''}`} style={{background:s.active?'linear-gradient(135deg,#b8934a,#d4aa6e)':'#d1d5db'}}>{s.photo?<img src={s.photo} alt="" className="w-full h-full object-cover"/>:s.name[0]}</div>
+                  <div className="flex-1 min-w-0"><div className="flex items-center gap-1.5"><span className="font-medium text-sm">{s.name}</span>{s.gender&&<span className="text-xs text-gray-400">({s.gender})</span>}{isThisWeek(s.birthDate)&&'🎂'}{!s.active&&<span className="text-xs bg-red-100 text-red-500 px-1.5 rounded-full">제적</span>}</div><p className="text-xs text-gray-400">{s.grade}{s.birthDate&&` · ${getBMMDD(s.birthDate)}`}</p></div>
+                  <div className="flex gap-1"><button onClick={e=>{e.stopPropagation();setEditSt(s);}} className="p-1.5 hover:bg-[#b8934a]/10 rounded-lg text-[#b8934a] text-sm">✏️</button><button onClick={e=>{e.stopPropagation();if(confirm('삭제?'))mergeArrayWrite('students_v3',setStudents,p=>p.filter(x=>x.id!==s.id));}} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 text-sm">🗑</button></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    ))}
+    {unassignedStudents.length>0&&(
+      <div>
+        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 pl-1">미배정 <span className="font-normal text-gray-400">({unassignedStudents.filter(s=>s.active).length}명)</span></p>
         <div className="space-y-2">
-          {ss.map(s=>(
+          {unassignedStudents.map(s=>(
             <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm cursor-pointer transition-all" onClick={()=>setDetailSt(s)}>
               <div onClick={s.photo?e=>{e.stopPropagation();setPhotoLb(s.photo);}:undefined} className={`w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center font-bold text-white text-sm flex-shrink-0 ${s.photo?'cursor-zoom-in':''}`} style={{background:s.active?'linear-gradient(135deg,#b8934a,#d4aa6e)':'#d1d5db'}}>{s.photo?<img src={s.photo} alt="" className="w-full h-full object-cover"/>:s.name[0]}</div>
               <div className="flex-1 min-w-0"><div className="flex items-center gap-1.5"><span className="font-medium text-sm">{s.name}</span>{s.gender&&<span className="text-xs text-gray-400">({s.gender})</span>}{isThisWeek(s.birthDate)&&'🎂'}{!s.active&&<span className="text-xs bg-red-100 text-red-500 px-1.5 rounded-full">제적</span>}</div><p className="text-xs text-gray-400">{s.grade}{s.birthDate&&` · ${getBMMDD(s.birthDate)}`}</p></div>
@@ -1121,7 +1144,7 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
           ))}
         </div>
       </div>
-    ))}
+    )}
     {!filtered.length&&<p className="text-center text-gray-400 py-12 text-sm">검색 결과 없음</p>}
     {showAdd&&<Modal title="학생 추가" onClose={()=>setShowAdd(false)}><StForm onSave={f=>mergeArrayWrite('students_v3',setStudents,p=>[...p,{...f,id:nextId(p)}])} onClose={()=>setShowAdd(false)}/></Modal>}
     {editSt&&<Modal title="학생 수정" onClose={()=>setEditSt(null)}><StForm initial={editSt} onSave={f=>mergeArrayWrite('students_v3',setStudents,p=>p.map(s=>s.id===f.id?f:s))} onClose={()=>setEditSt(null)}/></Modal>}
