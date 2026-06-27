@@ -61,8 +61,6 @@ const DEFAULT_SITE = {
   heroVerseRef: '잠언 22:6',
   announcement: '',
   adminPin: '1234',
-  googleClientId: '',
-  allowedEmails: [],
   heroBgType: 'gradient',   // 'gradient' | 'image'
   heroBgGradient: 'sky',    // preset key
   heroBgImage: '',          // base64
@@ -209,7 +207,6 @@ const getAge=bd=>{ if(!bd)return '';return new Date().getFullYear()-parseInt(bd.
 const getBMMDD=bd=>{ if(!bd)return '';const[,m,d]=bd.split('-');return `${m}월 ${d}일`; };
 const nextId=arr=>arr.length?Math.max(...arr.map(x=>x.id))+1:1;
 const fmtWeekDiff=d=>d===0?'오늘!🥳':d>0?`D-${d}`:`${-d}일 전`;
-const decodeJWT=token=>{ try{const b=token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');const json=decodeURIComponent(atob(b).split('').map(c=>'%'+c.charCodeAt(0).toString(16).padStart(2,'0')).join(''));return JSON.parse(json);}catch{return null;} };
 
 // ── 공통 컴포넌트 ─────────────────────────────────────────
 const Modal=({title,onClose,children,wide=false})=>(
@@ -1135,7 +1132,7 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
   </div>;
 
   const pendingTeachers=(accounts||[]).filter(a=>a.role==='teacher_pending');
-  const TABS=[{id:'site',l:'홈 설정'},{id:'bg',l:'배경'},{id:'sections',l:'섹션/반'},{id:'google',l:'Google 로그인'},{id:'accounts',l:`교사 승인${pendingTeachers.length?` (${pendingTeachers.length})`:''}`},{id:'pin',l:'보안'}];
+  const TABS=[{id:'site',l:'홈 설정'},{id:'bg',l:'배경'},{id:'sections',l:'섹션/반'},{id:'accounts',l:`교사 승인${pendingTeachers.length?` (${pendingTeachers.length})`:''}`},{id:'pin',l:'보안'}];
   return <div className="space-y-4">
     <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">⚙️ 관리자</h2><button onClick={()=>setAuthed(false)} className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 px-2 py-1 rounded-lg">로그아웃</button></div>
     <div className="flex gap-1.5 bg-gray-100 rounded-xl p-1 overflow-x-auto">
@@ -1202,19 +1199,6 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
           <button onClick={()=>{if(classes.some(c=>c.sectionId===sec.id))return alert('반이 있어 삭제 불가');if(confirm(`"${sec.name}" 섹션 삭제?`))setSections(p=>p.filter(s=>s.id!==sec.id));}} className="w-full py-2 text-xs text-red-400 hover:text-red-600 border border-red-100 rounded-lg hover:bg-red-50 transition-all">섹션 삭제</button>
         </div>
       ))}
-    </div>}
-
-    {tab==='google'&&<div className="space-y-4 bg-gray-50 rounded-2xl p-4">
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700 space-y-1">
-        <p className="font-semibold">📋 Google 로그인 설정</p>
-        <ol className="list-decimal list-inside space-y-0.5"><li>Google Cloud Console → OAuth 2.0 클라이언트 ID 생성</li><li>유형: 웹 애플리케이션</li><li>승인된 원본: <code className="bg-blue-100 px-1 rounded">http://localhost:8000</code></li><li>아래에 Client ID 입력</li></ol>
-        <p className="text-blue-500">※ 로컬 파일(file://)에서는 작동 안 함. <code>python -m http.server 8000</code> 후 접속 필요</p>
-      </div>
-      <Inp label="Google Client ID" value={site.googleClientId||''} onChange={v=>setSite(p=>({...p,googleClientId:v}))} placeholder="123456789-abc...apps.googleusercontent.com"/>
-      {site.googleClientId&&<p className="text-xs text-green-600 font-medium">✓ 설정됨 — 로그인 필요</p>}
-      <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">허용 이메일 (없으면 전체 허용)</label>
-        <AllowedEmails site={site} setSite={setSite}/>
-      </div>
     </div>}
 
     {tab==='accounts'&&<div className="space-y-3">
@@ -1309,39 +1293,6 @@ const BgSettings=({site,setSite})=>{
   );
 };
 
-const AllowedEmails=({site,setSite})=>{
-  const [input,setInput]=React.useState('');
-  const list=site.allowedEmails||[];
-  const add=()=>{
-    const v=input.trim().toLowerCase();
-    if(!v.includes('@'))return alert('올바른 이메일 형식이 아닙니다.');
-    if(list.includes(v))return alert('이미 추가된 이메일입니다.');
-    setSite(p=>({...p,allowedEmails:[...list,v]}));
-    setInput('');
-  };
-  const remove=email=>setSite(p=>({...p,allowedEmails:list.filter(e=>e!==email)}));
-  return(
-    <div className="space-y-3">
-      <p className="text-xs text-gray-500">허용된 이메일만 교사로 로그인할 수 있습니다. 비워두면 누구나 가입 가능합니다.</p>
-      <div className="flex gap-2">
-        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&add()}
-          placeholder="teacher@gmail.com" className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#b8934a]"/>
-        <button onClick={add} className="px-4 py-2 bg-[#3d6b4f] text-white rounded-xl text-sm font-medium hover:bg-[#2d5240]">추가</button>
-      </div>
-      {list.length>0&&(
-        <div className="space-y-1.5">
-          {list.map(email=>(
-            <div key={email} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2">
-              <span className="text-sm text-gray-700">{email}</span>
-              <button onClick={()=>remove(email)} className="text-red-400 hover:text-red-600 text-xs px-2 py-1 rounded-lg hover:bg-red-50">삭제</button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 const PinChg=({site,setSite})=>{
   const [form,setForm]=React.useState({cur:'',next:'',next2:''});
   const [msg,setMsg]=React.useState('');
@@ -1418,36 +1369,6 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
     setMsg('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.');
   };
 
-  const [googleProfile, setGoogleProfile] = useState(null);
-  const finishGoogleSignup = wantsTeacher => {
-    const role = wantsTeacher ? 'teacher_pending' : 'member';
-    const newAcc = { id: nextId(accounts), name: googleProfile.name, email: googleProfile.email, role, provider: 'google' };
-    setAccounts(p => [...p, newAcc]);
-    onSuccess({ name: newAcc.name, email: newAcc.email, picture: googleProfile.picture, provider: 'google', role });
-    setGoogleProfile(null);
-  };
-
-  const gRef = React.useRef();
-  useEffect(() => {
-    if (!site.googleClientId || !window.google || !gRef.current) return;
-    try {
-      window.google.accounts.id.initialize({
-        client_id: site.googleClientId,
-        callback: res => {
-          const p = decodeJWT(res.credential);
-          if (!p) { setErr('Google 인증 오류'); return; }
-          const existing = accounts.find(a => a.email.toLowerCase() === p.email.toLowerCase());
-          if (existing) {
-            onSuccess({ name: existing.name, email: existing.email, picture: p.picture, provider: 'google', role: existing.role || 'member' });
-          } else {
-            setGoogleProfile(p);
-          }
-        },
-      });
-      window.google.accounts.id.renderButton(gRef.current, { theme: 'outline', size: 'large', width: 300, text: 'signin_with', shape: 'pill', locale: 'ko' });
-    } catch (e) { console.warn('GIS error', e); }
-  }, [site.googleClientId]);
-
   const handleLogin = () => {
     if (!form.email || !form.password) { setErr('이메일과 비밀번호를 입력하세요.'); return; }
     const acc = accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase());
@@ -1478,27 +1399,8 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
           <p className="text-white/40 text-xs mt-1">{site.churchName}</p>
         </div>
 
-        {site.googleClientId && (
-          <div className="px-6 pt-5 pb-3">
-            <div ref={gRef} className="flex justify-center" />
-            <div className="relative mt-4 mb-1">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-100" /></div>
-              <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">또는 이메일로</span></div>
-            </div>
-          </div>
-        )}
-
-        {googleProfile && (
-          <div className="px-6 pb-6 pt-5 space-y-3">
-            <p className="text-sm text-gray-700">{googleProfile.name}님, 첫 로그인이시네요!</p>
-            <p className="text-xs text-gray-500">교사이신가요? 교사로 신청하면 관리자 승인 후 교사 관리 기능을 이용할 수 있어요. 신청하지 않으면 일반 회원으로 가입되어 사진 다운로드만 가능합니다.</p>
-            <button onClick={() => finishGoogleSignup(true)} className="w-full py-3 bg-[#3d6b4f] text-white rounded-2xl text-sm font-semibold hover:bg-[#2d5240] transition-all">교사로 신청합니다</button>
-            <button onClick={() => finishGoogleSignup(false)} className="w-full py-2.5 border border-gray-200 rounded-2xl text-sm text-gray-600 hover:bg-gray-50 transition-all">일반 회원으로 계속</button>
-          </div>
-        )}
-
-        {!googleProfile && tab !== 'reset' && (
-          <div className={`flex gap-1 px-6 ${site.googleClientId ? 'pt-0' : 'pt-5'}`}>
+        {tab !== 'reset' && (
+          <div className="flex gap-1 px-6 pt-5">
             {['login', 'signup'].map(t => (
               <button key={t} onClick={() => { setTab(t); setErr(''); setMsg(''); setForm({ name: '', email: '', password: '', password2: '', wantsTeacher: false }); }}
                 className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${tab === t ? 'bg-[#1a1a1a] text-white' : 'text-gray-400 hover:text-gray-700'}`}>
@@ -1558,7 +1460,7 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
           </div>
         )}
 
-        {!googleProfile && tab !== 'reset' && <div className="px-6 pb-6 pt-4 space-y-3">
+        {tab !== 'reset' && <div className="px-6 pb-6 pt-4 space-y-3">
           {msg && (
             <p className="text-xs text-green-600 bg-green-50 rounded-xl px-3 py-2">{msg}</p>
           )}
@@ -1646,7 +1548,6 @@ const App = () => {
   const handleRequestLogin = () => { if (!authUser) setShowLogin(true); };
   const handleLogout = () => {
     setAuthUser(null); setShowManage(false); setShowAccountMenu(false);
-    if (window.google && site.googleClientId) { try { window.google.accounts.id.disableAutoSelect(); } catch(e){} }
   };
   const handleWithdraw = () => {
     if (!confirm('정말 회원탈퇴 하시겠어요? 계정 정보가 삭제되며 되돌릴 수 없습니다.')) return;
