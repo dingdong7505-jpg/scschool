@@ -1590,8 +1590,8 @@ const App = () => {
         @import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
         body{font-family:'Noto Sans KR',sans-serif;color:#1a1a1a;background:#fff;}
-        h1,h2,h3{font-family:'Noto Serif KR',serif;}
-        .font-jua{font-family:'Jua',sans-serif;}
+        h1,h2,h3{font-family:'Noto Sans KR',sans-serif;}
+        .font-jua{font-family:'Noto Sans KR',sans-serif;}
         @keyframes slideIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         .fade-in{animation:fadeIn 0.5s ease}
