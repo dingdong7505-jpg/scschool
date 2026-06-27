@@ -356,6 +356,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
     {label:'홈',href:'#home'},
     {label:'교회학교 소개',href:'#about'},
     {label:'부서 안내',href:'#sections'},
+    {label:'행사안내',href:'#events'},
     {label:'갤러리',href:'#gallery'},
     {label:'기도제목',href:'#prayers'},
   ];
@@ -376,8 +377,8 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
       <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled?'bg-white/95 backdrop-blur-md shadow-sm':'bg-black/20 backdrop-blur-sm'}`}>
         <div className="max-w-7xl mx-auto px-6 flex items-center h-16 gap-8">
           <div className="flex items-center gap-3 flex-1">
-            <span className={`text-xl ${scrolled?'text-[#1a1a1a]':'text-white'}`}>✝</span>
-            <span className={`font-bold text-sm tracking-wide ${scrolled?'text-[#1a1a1a]':'text-white'}`}>{site.churchName}</span>
+            <span className={`text-2xl ${scrolled?'text-[#1a1a1a]':'text-white'}`}>✝</span>
+            <span className={`font-bold text-lg tracking-wide ${scrolled?'text-[#1a1a1a]':'text-white'}`}>{site.churchName}</span>
           </div>
           <div className="hidden md:flex items-center gap-6">
             {navLinks.map(l=>(
@@ -579,7 +580,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
 
       {/* ── 다가오는 행사 ── */}
       {events&&events.length>0&&(
-        <section className="py-20 bg-white">
+        <section id="events" className="py-20 bg-white">
           <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-10">
               <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">EVENTS</p>
