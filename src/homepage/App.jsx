@@ -151,6 +151,11 @@ function genAttendance() {
 }
 
 // ── 유틸 ─────────────────────────────────────────────────
+function useLocalState(key,init){
+  const [v,setV]=useState(()=>{ try{const s=localStorage.getItem(key);return s?JSON.parse(s):(typeof init==='function'?init():init);}catch{return typeof init==='function'?init():init;} });
+  useEffect(()=>{ try{localStorage.setItem(key,JSON.stringify(v));}catch{} },[key,v]);
+  return [v,setV];
+}
 function useLS(key,init){
   const [v,setV]=useState(()=>{ try{const s=localStorage.getItem(key);return s?JSON.parse(s):(typeof init==='function'?init():init);}catch{return typeof init==='function'?init():init;} });
   const remoteReady=useRef(false);
@@ -1594,7 +1599,7 @@ const App = () => {
   const [prayers, setPrayers] = useLS('prayers_v3', INITIAL_PRAYERS);
   const [accounts, setAccounts] = useLS('accounts_v3', []);
 
-  const [authUser, setAuthUser] = useState(null);
+  const [authUser, setAuthUser] = useLocalState('authUser_v3', null);
   const [showLogin, setShowLogin] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
