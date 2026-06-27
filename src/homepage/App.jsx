@@ -2,6 +2,28 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { logLogin, fetchSharedState, pushSharedState, sendOtp, verifyOtp } from '../supabaseClient.js';
 
+const resizeImage = (file, maxDim = 800, quality = 0.8) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else { width = Math.round(width * maxDim / height); height = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = e.target.result;
+  };
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
+
 const downloadDataUrl = async (dataUrl, filename) => {
   if (!dataUrl) return;
   try {
@@ -855,7 +877,7 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
     const e={name:'',classId:classes[0]?.id||'',grade:'',gender:'',phone:'',parentPhone:'',birthDate:'',address:'',registeredDate:todayStr(),memo:'',active:true,photo:''};
     const [form,setForm]=useState(initial||e);
     const set=(k,v)=>setForm(f=>({...f,[k]:v}));
-    const handlePhoto=ev=>{const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev2=>set('photo',ev2.target.result);r.readAsDataURL(file);};
+    const handlePhoto=async ev=>{const file=ev.target.files[0];if(!file)return;try{set('photo',await resizeImage(file,600,0.8));}catch{alert('사진을 처리하지 못했습니다.');}};
     return <div className="space-y-3">
       <div className="flex items-center gap-3">
         <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center text-white text-xl font-bold" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{form.photo?<img src={form.photo} alt="" className="w-full h-full object-cover"/>:(form.name?.[0]||'?')}</div>
@@ -1054,7 +1076,7 @@ const MPPhotos=({photos,setPhotos,sections})=>{
   const AddForm=({onSave,onClose})=>{
     const [f,setF]=useState({album:'',sectionId:'all',date:todayStr(),caption:'',visibility:'public'}),[img,setImg]=useState('');
     const set=(k,v)=>setF(p=>({...p,[k]:v}));
-    const hf=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setImg(ev.target.result);r.readAsDataURL(file);};
+    const hf=async e=>{const file=e.target.files[0];if(!file)return;try{setImg(await resizeImage(file,1000,0.8));}catch{alert('사진을 처리하지 못했습니다.');}};
     return <div className="space-y-3"><Inp label="앨범명" value={f.album} onChange={v=>set('album',v)} required/><Sel label="부서" value={f.sectionId} onChange={v=>set('sectionId',v)} options={[{value:'all',label:'전체(공통)'},...sections.map(s=>({value:s.id,label:`${s.emoji} ${s.name}`}))]}/><div className="grid grid-cols-2 gap-3"><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/><Inp label="설명" value={f.caption} onChange={v=>set('caption',v)}/></div>
       <Sel label="공개 범위" value={f.visibility} onChange={v=>set('visibility',v)} options={[{value:'public',label:'🌐 전체 공개 (누구나 볼 수 있음)'},{value:'member',label:'🔒 회원 전용 (로그인해야 보임)'}]}/>
       <div><label className="text-sm font-medium text-gray-700 block mb-1">사진</label><input type="file" accept="image/*" onChange={hf} className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-gray-100 file:text-gray-700"/></div>{img&&<img src={img} alt="" className="w-full h-36 object-cover rounded-xl"/>}<div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.album)return alert('앨범명 입력');onSave({...f,src:img});onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">저장</button></div></div>;
@@ -1160,7 +1182,7 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
           <div className="flex flex-col gap-1"><label className="text-xs font-medium text-gray-600">이모지 (사진 없을 때 표시)</label><div className="flex gap-1 flex-wrap">{EMJS.map(e=><button key={e} onClick={()=>setSections(p=>p.map(s=>s.id===sec.id?{...s,emoji:e}:s))} className={`w-8 h-8 rounded-lg border-2 text-base transition-all ${sec.emoji===e?'border-[#b8934a] bg-[#b8934a]/10':'border-gray-200'}`}>{e}</button>)}</div></div>
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-gray-600">대표 사진</label>
-            <input type="file" accept="image/*" onChange={e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setSections(p=>p.map(s=>s.id===sec.id?{...s,bannerImage:ev.target.result}:s));r.readAsDataURL(file);}} className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700"/>
+            <input type="file" accept="image/*" onChange={async e=>{const file=e.target.files[0];if(!file)return;try{const dataUrl=await resizeImage(file,1000,0.8);setSections(p=>p.map(s=>s.id===sec.id?{...s,bannerImage:dataUrl}:s));}catch{alert('사진을 처리하지 못했습니다.');}}} className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700"/>
             {sec.bannerImage&&<div className="flex items-center gap-2 mt-1"><img src={sec.bannerImage} alt="" className="w-16 h-16 rounded-lg object-cover"/><button onClick={()=>setSections(p=>p.map(s=>s.id===sec.id?{...s,bannerImage:''}:s))} className="text-xs text-red-400 hover:underline">사진 제거</button></div>}
           </div>
           <div className="border-t border-gray-200 pt-3">
@@ -1220,7 +1242,7 @@ const MPAdmin=({site,setSite,sections,setSections,classes,setClasses,teachers,st
 const BgSettings=({site,setSite})=>{
   const cur=site.heroBgGradient||'sky';
   const curType=site.heroBgType||'gradient';
-  const hf=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>{setSite(p=>({...p,heroBgImage:ev.target.result,heroBgType:'image'}));};r.readAsDataURL(file);};
+  const hf=async e=>{const file=e.target.files[0];if(!file)return;try{const dataUrl=await resizeImage(file,1600,0.8);setSite(p=>({...p,heroBgImage:dataUrl,heroBgType:'image'}));}catch{alert('사진을 처리하지 못했습니다.');}};
   return (
     <div className="space-y-4">
       <div className="h-28 rounded-2xl overflow-hidden relative" style={{
