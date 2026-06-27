@@ -851,10 +851,19 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
   }),[students,search,fSec,classes,sections]);
 
   const StForm=({initial,onSave,onClose})=>{
-    const e={name:'',classId:classes[0]?.id||'',grade:'',gender:'',phone:'',parentPhone:'',birthDate:'',address:'',registeredDate:todayStr(),memo:'',active:true};
+    const e={name:'',classId:classes[0]?.id||'',grade:'',gender:'',phone:'',parentPhone:'',birthDate:'',address:'',registeredDate:todayStr(),memo:'',active:true,photo:''};
     const [form,setForm]=useState(initial||e);
     const set=(k,v)=>setForm(f=>({...f,[k]:v}));
+    const handlePhoto=ev=>{const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev2=>set('photo',ev2.target.result);r.readAsDataURL(file);};
     return <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 flex items-center justify-center text-white text-xl font-bold" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{form.photo?<img src={form.photo} alt="" className="w-full h-full object-cover"/>:(form.name?.[0]||'?')}</div>
+        <div className="flex-1">
+          <label className="text-sm font-medium text-gray-700 block mb-1">사진</label>
+          <input type="file" accept="image/*" onChange={handlePhoto} className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-gray-100 file:text-gray-700"/>
+        </div>
+        {form.photo&&<button onClick={()=>set('photo','')} className="text-xs text-red-400 hover:underline flex-shrink-0">제거</button>}
+      </div>
       <div className="grid grid-cols-2 gap-3"><Inp label="이름" value={form.name} onChange={v=>set('name',v)} required/><Sel label="반" value={form.classId} onChange={v=>set('classId',v)} options={classes.map(c=>({value:c.id,label:c.name}))}/></div>
       <div className="grid grid-cols-3 gap-3"><Inp label="학년" value={form.grade} onChange={v=>set('grade',v)}/><Sel label="성별" value={form.gender} onChange={v=>set('gender',v)} options={[{value:'',label:'선택 안 함'},{value:'남',label:'남'},{value:'여',label:'여'}]}/><Inp label="생년월일" type="date" value={form.birthDate} onChange={v=>set('birthDate',v)}/></div>
       <Inp label="학생 연락처" value={form.phone} onChange={v=>set('phone',v)}/>
@@ -874,7 +883,7 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
     const cnt={출석:0,결석:0,조퇴:0,공결:0};recs.forEach(([,r])=>{if(r[s.id])cnt[r[s.id]]++;});
     const rate=recs.length?Math.round(cnt['출석']/recs.length*100):0;
     return <div className="space-y-4">
-      <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{s.name[0]}</div>
+      <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl overflow-hidden flex items-center justify-center text-white text-2xl font-bold flex-shrink-0" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{s.photo?<img src={s.photo} alt="" className="w-full h-full object-cover"/>:s.name[0]}</div>
       <div><div className="flex items-center gap-2"><h2 className="text-lg font-bold">{s.name}{isThisWeek(s.birthDate)&&' 🎂'}</h2>{!s.active&&<span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">제적</span>}</div><p className="text-sm text-gray-500">{sec?.name} · {cls?.name} · {s.grade}</p></div></div>
       <div className="grid grid-cols-2 gap-2 text-sm">{s.gender&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">성별</p><p className="font-medium">{s.gender}</p></div>}{s.birthDate&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">생년월일</p><p className="font-medium">{fmt(s.birthDate)} ({getAge(s.birthDate)})</p></div>}<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">등록일</p><p className="font-medium">{fmt(s.registeredDate)}</p></div>{s.phone&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">학생</p><p className="font-medium">{s.phone}</p></div>}{s.parentPhone&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">부모님</p><p className="font-medium">{s.parentPhone}</p></div>}</div>
       {s.address&&<div className="space-y-2">
@@ -919,7 +928,7 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
         <div className="space-y-2">
           {ss.map(s=>(
             <div key={s.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm cursor-pointer transition-all" onClick={()=>setDetailSt(s)}>
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-sm flex-shrink-0" style={{background:s.active?'linear-gradient(135deg,#b8934a,#d4aa6e)':'#d1d5db'}}>{s.name[0]}</div>
+              <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center font-bold text-white text-sm flex-shrink-0" style={{background:s.active?'linear-gradient(135deg,#b8934a,#d4aa6e)':'#d1d5db'}}>{s.photo?<img src={s.photo} alt="" className="w-full h-full object-cover"/>:s.name[0]}</div>
               <div className="flex-1 min-w-0"><div className="flex items-center gap-1.5"><span className="font-medium text-sm">{s.name}</span>{s.gender&&<span className="text-xs text-gray-400">({s.gender})</span>}{isThisWeek(s.birthDate)&&'🎂'}{!s.active&&<span className="text-xs bg-red-100 text-red-500 px-1.5 rounded-full">제적</span>}</div><p className="text-xs text-gray-400">{s.grade}{s.birthDate&&` · ${getBMMDD(s.birthDate)}`}</p></div>
               <div className="flex gap-1"><button onClick={e=>{e.stopPropagation();setEditSt(s);}} className="p-1.5 hover:bg-[#b8934a]/10 rounded-lg text-[#b8934a] text-sm">✏️</button><button onClick={e=>{e.stopPropagation();if(confirm('삭제?'))setStudents(p=>p.filter(x=>x.id!==s.id));}} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400 text-sm">🗑</button></div>
             </div>
