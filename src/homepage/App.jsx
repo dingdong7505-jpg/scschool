@@ -1109,7 +1109,10 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
       <button onClick={exportStudents} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-xl text-sm font-medium hover:bg-[#2d5240]">⬇ 엑셀 다운로드</button><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333]">+ 학생 추가</button></div></div>
     <p className="text-xs text-gray-400">엑셀 업로드 형식: 엑셀 다운로드한 파일과 같은 컬럼(이름, 반, 학년, 성별, 생년월일, 학생연락처, 부모님연락처, 주소, 등록일, 재적여부, 메모). "반" 이름은 기존 반 이름과 정확히 일치해야 자동으로 배정됩니다.</p>
     <div className="flex gap-2 overflow-x-auto pb-1">
-      {['전체',...sections.map(s=>s.name)].map(n=><button key={n} onClick={()=>setFSec(n)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${fSec===n?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{n}</button>)}
+      {['전체',...sections.map(s=>s.name)].map(n=>{
+        const cnt=n==='전체'?students.filter(s=>s.active).length:students.filter(s=>{if(!s.active)return false;const cls=classes.find(c=>c.id===s.classId);const sec=cls?sections.find(se=>se.id===cls.sectionId):null;return sec?.name===n;}).length;
+        return <button key={n} onClick={()=>setFSec(n)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${fSec===n?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{n} <span className={fSec===n?'text-white/60':'text-gray-400'}>({cnt})</span></button>;
+      })}
     </div>
     <div className="relative"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="이름 검색..." className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm outline-none focus:border-[#b8934a]"/><span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span></div>
     {bySection.map(({sec,classGroups})=>(
