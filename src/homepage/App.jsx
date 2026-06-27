@@ -266,10 +266,15 @@ const Sel=({label,value,onChange,options})=>(
 
 const MiniCalendar=({events,sections})=>{
   const today=new Date();
-  const year=today.getFullYear(),month=today.getMonth();
+  const [viewYear,setViewYear]=useState(today.getFullYear());
+  const [viewMonth,setViewMonth]=useState(today.getMonth());
+  const year=viewYear,month=viewMonth;
   const first=new Date(year,month,1);
   const startDow=first.getDay();
   const daysInMonth=new Date(year,month+1,0).getDate();
+  const goPrev=()=>{ if(month===0){setViewYear(y=>y-1);setViewMonth(11);} else setViewMonth(m=>m-1); };
+  const goNext=()=>{ if(month===11){setViewYear(y=>y+1);setViewMonth(0);} else setViewMonth(m=>m+1); };
+  const goToday=()=>{ setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); };
   const eventsByDay={};
   (events||[]).forEach(e=>{
     const d=new Date(e.date+'T00:00:00');
@@ -283,13 +288,17 @@ const MiniCalendar=({events,sections})=>{
   for(let d=1;d<=daysInMonth;d++)cells.push(d);
   return (
     <div className="bg-[#faf7f2] rounded-2xl p-3">
-      <p className="text-center font-bold text-gray-900 text-sm mb-3">{year}년 {month+1}월</p>
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={goPrev} className="w-7 h-7 rounded-full hover:bg-black/5 text-gray-500 flex items-center justify-center">‹</button>
+        <button onClick={goToday} className="font-bold text-gray-900 text-sm hover:text-[#b8934a] transition-colors">{year}년 {month+1}월</button>
+        <button onClick={goNext} className="w-7 h-7 rounded-full hover:bg-black/5 text-gray-500 flex items-center justify-center">›</button>
+      </div>
       <div className="grid grid-cols-7 text-center text-[10px] text-gray-400 mb-1">
         {['일','월','화','수','목','금','토'].map(d=><span key={d}>{d}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-[2px]">
         {cells.map((d,i)=>{
-          const isToday=d===today.getDate();
+          const isToday=d===today.getDate()&&year===today.getFullYear()&&month===today.getMonth();
           const dayEvents=d?(eventsByDay[d]||[]):[];
           return (
             <div key={i} className="min-h-[44px] rounded-md p-0.5">
@@ -569,14 +578,14 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
       })()}
 
       {/* ── 다가오는 행사 ── */}
-      {events&&events.filter(e=>e.date>=todayStr()).length>0&&(
+      {events&&events.length>0&&(
         <section className="py-20 bg-white">
           <div className="max-w-6xl mx-auto px-6">
             <div className="text-center mb-10">
               <p className="text-[#b8934a] text-xs tracking-[0.3em] uppercase mb-3 font-sans">EVENTS</p>
               <h2 className="text-3xl font-bold text-gray-900 font-jua">다가오는 행사</h2>
             </div>
-            <div className="grid md:grid-cols-[1fr_260px] gap-6 items-start">
+            <div className="grid md:grid-cols-[3fr_2fr] gap-6 items-start">
               <MiniCalendar events={events} sections={sections}/>
               <div className="space-y-2.5">
                 {events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(e=>(
@@ -806,7 +815,7 @@ const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,s
             {page==='stats'&&<MPStats students={students} classes={classes} sections={sections} attendance={attendance}/>}
             {page==='birthday'&&<MPBirthday students={students} classes={classes}/>}
             {page==='teachers'&&<MPTeachers teachers={teachers} setTeachers={setTeachers} students={students} classes={classes} sections={sections}/>}
-            {page==='meetings'&&<MPMeetings meetings={meetings} setMeetings={setMeetings} classes={classes}/>}
+            {page==='meetings'&&<MPMeetings meetings={meetings} setMeetings={setMeetings} sections={sections}/>}
             {page==='events'&&<MPEvents events={events} setEvents={setEvents} sections={sections}/>}
             {page==='photos'&&<MPPhotos photos={photos} setPhotos={setPhotos} sections={sections}/>}
             {page==='prayers'&&<MPPrayers prayers={prayers} setPrayers={setPrayers}/>}
@@ -1209,17 +1218,25 @@ const MPTeachers=({teachers,setTeachers,students,classes,sections})=>{
   </div>;
 };
 
-const MPMeetings=({meetings,setMeetings,classes})=>{
-  const [showAdd,setShowAdd]=useState(false),[detail,setDetail]=useState(null),[filterCls,setFilterCls]=useState('all');
-  const CATS=['공과','회의록','공지','교육자료','기타'];
-  const getClsName=id=>classes.find(c=>c.id===id)?.name;
-  const sorted=[...meetings].filter(m=>filterCls==='all'||m.classId===filterCls).sort((a,b)=>b.date.localeCompare(a.date));
+const MPMeetings=({meetings,setMeetings,sections})=>{
+  const [tab,setTab]=useState('meeting'); // 'meeting' | 'lesson'
+  const [showAdd,setShowAdd]=useState(false),[detail,setDetail]=useState(null),[filterSec,setFilterSec]=useState('all');
+  const MEETING_CATS=['회의록','공지','교육자료','기타'];
+  const getSecName=id=>sections.find(s=>s.id===id)?.name;
+  const inTab=tab==='lesson'
+    ? meetings.filter(m=>m.category==='공과')
+    : meetings.filter(m=>m.category!=='공과');
+  const sorted=(tab==='lesson'?inTab.filter(m=>filterSec==='all'||m.sectionId===filterSec):inTab).sort((a,b)=>b.date.localeCompare(a.date));
   const DocForm=({onSave,onClose})=>{
-    const [f,setF]=useState({title:'',date:todayStr(),uploader:'',category:'공과',classId:'all',content:'',fileName:'',fileData:''});
+    const [f,setF]=useState({title:'',date:todayStr(),uploader:'',category:tab==='lesson'?'공과':'회의록',sectionId:'all',content:'',fileName:'',fileData:''});
     const set=(k,v)=>setF(p=>({...p,[k]:v}));
     const handleFile=e=>{const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>setF(p=>({...p,fileName:file.name,fileData:ev.target.result}));r.readAsDataURL(file);};
-    return <div className="space-y-3"><Inp label="제목" value={f.title} onChange={v=>set('title',v)} required/><div className="grid grid-cols-2 gap-3"><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/><Sel label="카테고리" value={f.category} onChange={v=>set('category',v)} options={CATS}/></div>
-      <Sel label="대상 반 (공과용)" value={f.classId} onChange={v=>set('classId',v)} options={[{value:'all',label:'전체/공통'},...classes.map(c=>({value:c.id,label:c.name}))]}/>
+    return <div className="space-y-3"><Inp label="제목" value={f.title} onChange={v=>set('title',v)} required/>
+      <div className="grid grid-cols-2 gap-3">
+        <Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/>
+        {tab==='meeting'&&<Sel label="카테고리" value={f.category} onChange={v=>set('category',v)} options={MEETING_CATS}/>}
+      </div>
+      {tab==='lesson'&&<Sel label="담당 부서" value={f.sectionId} onChange={v=>set('sectionId',v)} options={[{value:'all',label:'전체/공통'},...sections.map(s=>({value:s.id,label:`${s.emoji} ${s.name}`}))]}/>}
       <Inp label="작성자" value={f.uploader} onChange={v=>set('uploader',v)}/>
       <div><label className="text-sm font-medium text-gray-700 block mb-1">파일 첨부 (PDF, 문서, 이미지 등)</label><input type="file" onChange={handleFile} className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-gray-100 file:text-gray-700"/>{f.fileName&&<p className="text-xs text-green-600 mt-1">✓ {f.fileName}</p>}</div>
       <div className="flex flex-col gap-1"><label className="text-sm font-medium text-gray-700">내용 (파일 없을 때 텍스트로 기록)</label><textarea value={f.content} onChange={e=>set('content',e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm h-24 resize-none outline-none focus:border-[#b8934a]"/></div>
@@ -1230,15 +1247,23 @@ const MPMeetings=({meetings,setMeetings,classes})=>{
     const b=new Blob([`${m.title}\n${m.date}\n${m.uploader}\n\n${m.content}`],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=`${m.title}.txt`;a.click();
   };
   return <div className="space-y-4">
-    <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">회의자료 · 공과</h2><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm">+ 자료 추가</button></div>
-    <div className="flex gap-2 overflow-x-auto pb-1">
-      <button onClick={()=>setFilterCls('all')} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${filterCls==='all'?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>전체</button>
-      {classes.map(c=><button key={c.id} onClick={()=>setFilterCls(c.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${filterCls===c.id?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>{c.name}</button>)}
+    <div className="flex items-center justify-between">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <button onClick={()=>setTab('meeting')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${tab==='meeting'?'bg-white shadow-sm text-gray-900':'text-gray-500'}`}>📄 회의자료</button>
+        <button onClick={()=>setTab('lesson')} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${tab==='lesson'?'bg-white shadow-sm text-gray-900':'text-gray-500'}`}>📖 공과</button>
+      </div>
+      <button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm">+ 추가</button>
     </div>
-    <div className="space-y-2">{sorted.map(m=><div key={m.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100 hover:shadow-sm transition-all"><div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-lg shadow-sm flex-shrink-0">{m.category==='공과'?'📖':'📄'}</div><div className="flex-1 min-w-0 cursor-pointer" onClick={()=>setDetail(m)}><p className="font-medium text-sm">{m.title}</p><p className="text-xs text-gray-400">{fmt(m.date)} · {m.uploader}{m.classId&&m.classId!=='all'&&getClsName(m.classId)?` · ${getClsName(m.classId)}`:''}</p></div><div className="flex items-center gap-1 flex-shrink-0"><span className="text-xs bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">{m.category}</span><button onClick={()=>download(m)} className="p-1.5 text-[#b8934a] hover:bg-[#b8934a]/10 rounded text-sm">⬇</button><button onClick={()=>{if(confirm('삭제?'))mergeArrayWrite('meetings_v3',setMeetings,p=>p.filter(x=>x.id!==m.id));}} className="p-1.5 text-red-400 hover:bg-red-50 rounded text-sm">🗑</button></div></div>)}</div>
-    {!sorted.length&&<p className="text-center text-gray-400 py-8 text-sm">자료가 없습니다.</p>}
-    {showAdd&&<Modal title="자료 추가" onClose={()=>setShowAdd(false)} wide><DocForm onSave={m=>mergeArrayWrite('meetings_v3',setMeetings,p=>[...p,{...m,id:nextId(p)}])} onClose={()=>setShowAdd(false)}/></Modal>}
-    {detail&&<Modal title={detail.title} onClose={()=>setDetail(null)} wide><div className="space-y-3"><div className="flex gap-2 text-xs flex-wrap"><span className="text-gray-500">{fmt(detail.date)}</span><span className="text-gray-300">·</span><span className="text-gray-500">{detail.uploader}</span><span className="bg-gray-100 text-gray-600 rounded-full px-2">{detail.category}</span>{detail.classId&&detail.classId!=='all'&&getClsName(detail.classId)&&<span className="bg-[#b8934a]/10 text-[#b8934a] rounded-full px-2">{getClsName(detail.classId)}</span>}</div><div className="bg-gray-50 rounded-xl p-4 text-sm whitespace-pre-wrap min-h-20">{detail.content}</div><div className="flex gap-2"><button onClick={()=>setDetail(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">닫기</button><button onClick={()=>download(detail)} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">⬇ 다운로드</button></div></div></Modal>}
+    {tab==='lesson'&&(
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <button onClick={()=>setFilterSec('all')} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${filterSec==='all'?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>전체</button>
+        {sections.map(s=><button key={s.id} onClick={()=>setFilterSec(s.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${filterSec===s.id?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>{s.emoji} {s.name}</button>)}
+      </div>
+    )}
+    <div className="space-y-2">{sorted.map(m=><div key={m.id} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100 hover:shadow-sm transition-all"><div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center text-lg shadow-sm flex-shrink-0">{m.category==='공과'?'📖':'📄'}</div><div className="flex-1 min-w-0 cursor-pointer" onClick={()=>setDetail(m)}><p className="font-medium text-sm">{m.title}</p><p className="text-xs text-gray-400">{fmt(m.date)} · {m.uploader}{m.sectionId&&m.sectionId!=='all'&&getSecName(m.sectionId)?` · ${getSecName(m.sectionId)}`:''}</p></div><div className="flex items-center gap-1 flex-shrink-0">{tab==='meeting'&&<span className="text-xs bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">{m.category}</span>}<button onClick={()=>download(m)} className="p-1.5 text-[#b8934a] hover:bg-[#b8934a]/10 rounded text-sm">⬇</button><button onClick={()=>{if(confirm('삭제?'))mergeArrayWrite('meetings_v3',setMeetings,p=>p.filter(x=>x.id!==m.id));}} className="p-1.5 text-red-400 hover:bg-red-50 rounded text-sm">🗑</button></div></div>)}</div>
+    {!sorted.length&&<p className="text-center text-gray-400 py-8 text-sm">{tab==='lesson'?'등록된 공과가 없습니다.':'등록된 회의자료가 없습니다.'}</p>}
+    {showAdd&&<Modal title={tab==='lesson'?'공과 추가':'회의자료 추가'} onClose={()=>setShowAdd(false)} wide><DocForm onSave={m=>mergeArrayWrite('meetings_v3',setMeetings,p=>[...p,{...m,id:nextId(p)}])} onClose={()=>setShowAdd(false)}/></Modal>}
+    {detail&&<Modal title={detail.title} onClose={()=>setDetail(null)} wide><div className="space-y-3"><div className="flex gap-2 text-xs flex-wrap"><span className="text-gray-500">{fmt(detail.date)}</span><span className="text-gray-300">·</span><span className="text-gray-500">{detail.uploader}</span><span className="bg-gray-100 text-gray-600 rounded-full px-2">{detail.category}</span>{detail.sectionId&&detail.sectionId!=='all'&&getSecName(detail.sectionId)&&<span className="bg-[#b8934a]/10 text-[#b8934a] rounded-full px-2">{getSecName(detail.sectionId)}</span>}</div><div className="bg-gray-50 rounded-xl p-4 text-sm whitespace-pre-wrap min-h-20">{detail.content}</div><div className="flex gap-2"><button onClick={()=>setDetail(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">닫기</button><button onClick={()=>download(detail)} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">⬇ 다운로드</button></div></div></Modal>}
   </div>;
 };
 
