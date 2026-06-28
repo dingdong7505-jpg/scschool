@@ -16,14 +16,9 @@ export async function logLogin({ name, email, provider }) {
 
 export async function fetchSharedState(key) {
   if (!supabase) return null;
-  try {
-    const { data, error } = await supabase.from('app_state').select('value').eq('key', key).maybeSingle();
-    if (error) { console.warn('fetchSharedState failed', key, error); return null; }
-    return data ? data.value : null;
-  } catch (e) {
-    console.warn('fetchSharedState failed', key, e);
-    return null;
-  }
+  const { data, error } = await supabase.from('app_state').select('value').eq('key', key).maybeSingle();
+  if (error) { console.warn('fetchSharedState failed', key, error); throw error; }
+  return data ? data.value : null;
 }
 
 export async function pushSharedState(key, value) {

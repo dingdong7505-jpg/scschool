@@ -14,6 +14,7 @@ const mergeArrayWrite = async (key, setLocal, mutate) => {
     await pushSharedState(key, merged);
   } catch (e) {
     console.warn('merge write failed', key, e);
+    alert('서버 연결에 문제가 있어 변경사항이 저장되지 않았을 수 있습니다. 인터넷 연결을 확인하고 다시 시도해주세요.');
   }
 };
 
@@ -1166,8 +1167,9 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
 
 const MPStats=({students,classes,sections,attendance})=>{
   const active=students.filter(s=>s.active);
-  const totR=Object.values(attendance).reduce((a,r)=>a+Object.values(r).length,0);
-  const totP=Object.values(attendance).reduce((a,r)=>a+Object.values(r).filter(s=>s==='출석').length,0);
+  const latestDate=Object.keys(attendance).sort((a,b)=>b.localeCompare(a))[0];
+  const latestRec=latestDate?attendance[latestDate]:null;
+  const totP=latestRec?active.filter(s=>latestRec[s.id]==='출석').length:0;
   const monthly=useMemo(()=>{
     const m=[];
     for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const ym=d.toISOString().slice(0,7),lbl=`${d.getMonth()+1}월`;
@@ -1180,7 +1182,7 @@ const MPStats=({students,classes,sections,attendance})=>{
     <h2 className="font-bold text-gray-900 text-lg">통계</h2>
     <div className="grid grid-cols-2 gap-3">
       <div className="bg-gray-50 rounded-2xl p-4 text-center"><p className="text-3xl font-bold text-[#b8934a]">{active.length}</p><p className="text-xs text-gray-500 mt-1">재적 인원</p></div>
-      <div className="bg-gray-50 rounded-2xl p-4 text-center"><p className="text-3xl font-bold text-[#3d6b4f]">{totR?Math.round(totP/totR*100):0}%</p><p className="text-xs text-gray-500 mt-1">전체 출석률 ({totP}/{totR}회)</p></div>
+      <div className="bg-gray-50 rounded-2xl p-4 text-center"><p className="text-2xl font-bold text-[#3d6b4f]">{active.length}명 중 {totP}명</p><p className="text-xs text-gray-500 mt-1">{latestDate?`최근 출석 (${fmt(latestDate)})`:'출석 기록 없음'}</p></div>
     </div>
     <div className="bg-gray-50 rounded-2xl p-4">
       <h3 className="font-semibold text-gray-800 mb-3 text-sm">월별 출석률</h3>
@@ -1197,10 +1199,9 @@ const MPStats=({students,classes,sections,attendance})=>{
       {sections.map(sec=>{
         const cIds=classes.filter(c=>c.sectionId===sec.id).map(c=>c.id);
         const ss=active.filter(s=>cIds.includes(s.classId));
-        const recent=Object.entries(attendance).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,8);
-        let t=0,p=0;recent.forEach(([,r])=>ss.forEach(s=>{if(r[s.id]){t++;if(r[s.id]==='출석')p++;}}));
-        const rate=t?Math.round(p/t*100):0;
-        return <div key={sec.id} className="mb-2"><div className="flex justify-between text-xs mb-1"><span className="font-medium">{sec.emoji} {sec.name} ({ss.length}명)</span><span className="font-bold text-[#b8934a]">{rate}% <span className="text-gray-400 font-normal">({p}/{t}회)</span></span></div><div className="h-2 bg-gray-200 rounded-full overflow-hidden"><div className="h-full rounded-full bg-[#b8934a] transition-all" style={{width:`${rate}%`}}/></div></div>;
+        const p=latestRec?ss.filter(s=>latestRec[s.id]==='출석').length:0;
+        const rate=ss.length?Math.round(p/ss.length*100):0;
+        return <div key={sec.id} className="mb-2"><div className="flex justify-between text-xs mb-1"><span className="font-medium">{sec.emoji} {sec.name} ({ss.length}명 중 {p}명)</span><span className="font-bold text-[#b8934a]">{rate}%</span></div><div className="h-2 bg-gray-200 rounded-full overflow-hidden"><div className="h-full rounded-full bg-[#b8934a] transition-all" style={{width:`${rate}%`}}/></div></div>;
       })}
     </div>
     <div className="bg-gray-50 rounded-2xl p-4">
