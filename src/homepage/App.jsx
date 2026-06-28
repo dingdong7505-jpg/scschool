@@ -1340,20 +1340,57 @@ const MPPhotos=({photos,setPhotos,sections})=>{
   const EMOJIS=['🌸','🌿','⛅','🌟','🙏','❤️','✝️','🎉'];
   const filtered=photos.filter(p=>selSec==='all'||p.sectionId===selSec||p.sectionId==='all');
   const byAlbum={};filtered.forEach(p=>{if(!byAlbum[p.album])byAlbum[p.album]=[];byAlbum[p.album].push(p);});
+  const albumNames=[...new Set(photos.map(p=>p.album).filter(Boolean))];
   const AddForm=({onSave,onClose})=>{
-    const [f,setF]=useState({album:'',sectionId:'all',date:todayStr(),caption:'',visibility:'public'}),[img,setImg]=useState('');
+    const [albumMode,setAlbumMode]=useState(albumNames.length?'existing':'new');
+    const [f,setF]=useState({album:albumNames[0]||'',sectionId:'all',date:todayStr(),caption:'',visibility:'public'});
+    const [imgs,setImgs]=useState([]); // [{name,src}]
+    const [busy,setBusy]=useState(false);
     const set=(k,v)=>setF(p=>({...p,[k]:v}));
-    const hf=async e=>{const file=e.target.files[0];if(!file)return;try{setImg(await resizeImage(file,1000,0.8));}catch{alert('사진을 처리하지 못했습니다.');}};
-    return <div className="space-y-3"><Inp label="앨범명" value={f.album} onChange={v=>set('album',v)} required/><Sel label="부서" value={f.sectionId} onChange={v=>set('sectionId',v)} options={[{value:'all',label:'전체(공통)'},...sections.map(s=>({value:s.id,label:`${s.emoji} ${s.name}`}))]}/><div className="grid grid-cols-2 gap-3"><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/><Inp label="설명" value={f.caption} onChange={v=>set('caption',v)}/></div>
+    const pickAlbum=name=>{
+      set('album',name);
+      const existing=photos.find(p=>p.album===name);
+      if(existing){set('sectionId',existing.sectionId||'all');set('visibility',existing.visibility||'public');}
+    };
+    const hf=async e=>{
+      const files=Array.from(e.target.files||[]);if(!files.length)return;
+      setBusy(true);
+      try{
+        const results=await Promise.all(files.map(file=>resizeImage(file,1000,0.8)));
+        setImgs(prev=>[...prev,...results.map((src,i)=>({src,name:files[i].name}))]);
+      }catch{alert('일부 사진을 처리하지 못했습니다.');}
+      setBusy(false);
+    };
+    const removeImg=i=>setImgs(prev=>prev.filter((_,idx)=>idx!==i));
+    return <div className="space-y-3">
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-700">앨범 {albumMode==='existing'?'선택':'명'}<span className="text-red-400 ml-0.5">*</span></label>
+        {albumNames.length>0&&<div className="flex gap-1 mb-1">
+          <button type="button" onClick={()=>{setAlbumMode('existing');pickAlbum(albumNames[0]);}} className={`flex-1 py-1.5 rounded-lg text-xs font-medium border ${albumMode==='existing'?'bg-[#1a1a1a] text-white border-[#1a1a1a]':'border-gray-200 text-gray-500'}`}>기존 앨범에 추가</button>
+          <button type="button" onClick={()=>{setAlbumMode('new');set('album','');}} className={`flex-1 py-1.5 rounded-lg text-xs font-medium border ${albumMode==='new'?'bg-[#1a1a1a] text-white border-[#1a1a1a]':'border-gray-200 text-gray-500'}`}>+ 새 앨범</button>
+        </div>}
+        {albumMode==='existing'?
+          <select value={f.album} onChange={e=>pickAlbum(e.target.value)} className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#b8934a] bg-white">
+            {albumNames.map(n=><option key={n} value={n}>{n}</option>)}
+          </select>
+          :<input type="text" value={f.album} onChange={e=>set('album',e.target.value)} placeholder="새 앨범 이름" className="border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-[#b8934a] focus:ring-2 focus:ring-[#b8934a]/20 outline-none transition-all"/>}
+      </div>
+      <Sel label="부서" value={f.sectionId} onChange={v=>set('sectionId',v)} options={[{value:'all',label:'전체(공통)'},...sections.map(s=>({value:s.id,label:`${s.emoji} ${s.name}`}))]}/>
+      <div className="grid grid-cols-2 gap-3"><Inp label="날짜" type="date" value={f.date} onChange={v=>set('date',v)}/><Inp label="설명" value={f.caption} onChange={v=>set('caption',v)}/></div>
       <Sel label="공개 범위" value={f.visibility} onChange={v=>set('visibility',v)} options={[{value:'public',label:'🌐 전체 공개 (누구나 볼 수 있음)'},{value:'member',label:'🔒 회원 전용 (로그인해야 보임)'}]}/>
-      <div><label className="text-sm font-medium text-gray-700 block mb-1">사진</label><input type="file" accept="image/*" onChange={hf} className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-gray-100 file:text-gray-700"/></div>{img&&<img src={img} alt="" className="w-full h-36 object-cover rounded-xl"/>}<div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.album)return alert('앨범명 입력');onSave({...f,src:img});onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">저장</button></div></div>;
+      <div><label className="text-sm font-medium text-gray-700 block mb-1">사진 (여러 장 선택 가능)</label><input type="file" accept="image/*" multiple onChange={hf} className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:bg-gray-100 file:text-gray-700"/></div>
+      {busy&&<p className="text-xs text-gray-400">사진 처리 중...</p>}
+      {imgs.length>0&&<div className="grid grid-cols-4 gap-2">{imgs.map((im,i)=><div key={i} className="relative aspect-square rounded-xl overflow-hidden"><img src={im.src} alt="" className="w-full h-full object-cover"/><button type="button" onClick={()=>removeImg(i)} className="absolute top-0.5 right-0.5 bg-black/60 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">✕</button></div>)}</div>}
+      {imgs.length>0&&<p className="text-xs text-gray-400">{imgs.length}장 선택됨</p>}
+      <div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.album)return alert('앨범명 입력');if(!imgs.length)return alert('사진을 선택해주세요');onSave(imgs.map(im=>({...f,src:im.src})));onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">저장</button></div>
+    </div>;
   };
   return <div className="space-y-4">
     <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">사진 앨범</h2><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm">+ 추가</button></div>
     <div className="flex gap-2 overflow-x-auto pb-1"><button onClick={()=>setSelSec('all')} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${selSec==='all'?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>전체</button>{sections.map(s=><button key={s.id} onClick={()=>setSelSec(s.id)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium ${selSec===s.id?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-600'}`}>{s.emoji} {s.name}</button>)}</div>
     {Object.entries(byAlbum).map(([album,ps])=><div key={album}><p className="text-sm font-semibold text-gray-700 mb-2">{album} <span className="text-gray-400 font-normal">({ps.length}장)</span></p><div className="grid grid-cols-3 gap-2">{ps.map((p,i)=><div key={p.id} onClick={()=>setLb(p)} className="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity relative">{p.src?<img src={p.src} alt="" className="w-full h-full object-cover"/>:<span className="text-3xl">{EMOJIS[i%EMOJIS.length]}</span>}{p.visibility==='member'&&<span className="absolute top-1 right-1 bg-black/60 text-white text-[10px] rounded-full px-1.5 py-0.5">🔒 회원</span>}</div>)}</div></div>)}
     {!filtered.length&&<p className="text-center text-gray-400 py-8 text-sm">사진 없음</p>}
-    {showAdd&&<Modal title="사진 추가" onClose={()=>setShowAdd(false)}><AddForm onSave={p=>mergeArrayWrite('photos_v3',setPhotos,pv=>[...pv,{...p,id:nextId(pv)}])} onClose={()=>setShowAdd(false)}/></Modal>}
+    {showAdd&&<Modal title="사진 추가" wide onClose={()=>setShowAdd(false)}><AddForm onSave={list=>mergeArrayWrite('photos_v3',setPhotos,pv=>{let nid=nextId(pv);return [...pv,...list.map(p=>({...p,id:nid++}))];})} onClose={()=>setShowAdd(false)}/></Modal>}
     {lb&&<div className="fixed inset-0 bg-black/80 z-[300] flex flex-col items-center justify-center p-4" onClick={()=>setLb(null)}><button className="absolute top-4 right-4 text-white text-2xl">✕</button>{lb.src?<img src={lb.src} alt="" className="max-w-full max-h-[70vh] rounded-xl object-contain" onClick={e=>e.stopPropagation()}/>:<div className="w-48 h-48 bg-gray-800 rounded-xl flex items-center justify-center text-5xl">🖼️</div>}{lb.caption&&<p className="text-white mt-3 text-sm">{lb.caption}</p>}<div className="flex gap-2 mt-4">{lb.src&&<button onClick={e=>{e.stopPropagation();downloadDataUrl(lb.src,`${lb.album||'photo'}.jpg`);}} className="px-5 py-2.5 bg-white text-[#1a1a1a] rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">⬇ 다운로드</button>}<button onClick={e=>{e.stopPropagation();if(confirm('이 사진을 삭제할까요?')){mergeArrayWrite('photos_v3',setPhotos,pv=>pv.filter(x=>x.id!==lb.id));setLb(null);}}} className="px-5 py-2.5 bg-red-500 text-white rounded-full text-sm font-semibold hover:bg-red-600 transition-all">🗑 삭제</button></div></div>}
   </div>;
 };
