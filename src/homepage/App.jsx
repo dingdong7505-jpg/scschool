@@ -859,13 +859,13 @@ const MPDashboard=({students,classes,sections,attendance,meetings,nav})=>{
   const weekBdays=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const recent=[...meetings].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
 
+  const latestDate=Object.keys(attendance).sort((a,b)=>b.localeCompare(a))[0];
+  const latestRec=latestDate?attendance[latestDate]:null;
   const secRates=sections.map(sec=>{
     const cIds=classes.filter(c=>c.sectionId===sec.id).map(c=>c.id);
     const ss=active.filter(s=>cIds.includes(s.classId));
-    const recs=Object.entries(attendance).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,4);
-    let t=0,p=0;
-    recs.forEach(([,r])=>ss.forEach(s=>{if(r[s.id]){t++;if(r[s.id]==='출석')p++;}}));
-    return {sec,cnt:ss.length,rate:t?Math.round(p/t*100):0};
+    const p=latestRec?ss.filter(s=>latestRec[s.id]==='출석').length:0;
+    return {sec,cnt:ss.length,present:p,rate:ss.length?Math.round(p/ss.length*100):0};
   });
 
   return (
@@ -882,10 +882,10 @@ const MPDashboard=({students,classes,sections,attendance,meetings,nav})=>{
 
       <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
         <h3 className="font-semibold text-gray-800 mb-3 text-sm">부서별 최근 출석률</h3>
-        {secRates.map(({sec,cnt,rate})=>(
+        {secRates.map(({sec,cnt,present,rate})=>(
           <div key={sec.id} className="mb-2">
             <div className="flex justify-between text-xs mb-1">
-              <span className="font-medium text-gray-700">{sec.emoji} {sec.name} <span className="text-gray-400">({cnt}명)</span></span>
+              <span className="font-medium text-gray-700">{sec.emoji} {sec.name} <span className="text-gray-400">({cnt}명 중 {present}명)</span></span>
               <span className="font-bold text-gray-700">{rate}%</span>
             </div>
             <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
