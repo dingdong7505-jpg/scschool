@@ -17,6 +17,14 @@ const mergeArrayWrite = async (key, setLocal, mutate) => {
   }
 };
 
+const gradeNumOf = name => { const m = (name||'').match(/\d+/); return m ? parseInt(m[0]) : 999; };
+const sortClasses = (classes, sections) => classes.slice().sort((a, b) => {
+  const secA = sections.findIndex(s => s.id === a.sectionId);
+  const secB = sections.findIndex(s => s.id === b.sectionId);
+  if (secA !== secB) return secA - secB;
+  return gradeNumOf(a.name) - gradeNumOf(b.name);
+});
+
 const resizeImage = (file, maxDim = 800, quality = 0.8) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = e => {
@@ -947,7 +955,7 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
           <label className="text-xs font-medium text-gray-600 block mb-1">날짜</label>
           <input type="date" value={selDate} onChange={e=>{setSelDate(e.target.value);setSaved(false);}} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#b8934a]"/>
         </div>
-        <Sel label="반" value={selCls} onChange={v=>{setSelCls(v);setSaved(false);}} options={classes.map(c=>({value:c.id,label:c.name}))}/>
+        <Sel label="반" value={selCls} onChange={v=>{setSelCls(v);setSaved(false);}} options={sortClasses(classes,sections).map(c=>({value:c.id,label:c.name}))}/>
       </div>
       {sec&&<div className="text-xs text-gray-400">{sec.emoji} {sec.name} → {cls?.name}</div>}
       <div className="grid grid-cols-4 gap-2 text-center text-xs">
@@ -1012,7 +1020,7 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
         </div>
         {form.photo&&<button onClick={()=>set('photo','')} className="text-xs text-red-400 hover:underline flex-shrink-0">제거</button>}
       </div>
-      <div className="grid grid-cols-2 gap-3"><Inp label="이름" value={form.name} onChange={v=>set('name',v)} required/><Sel label="반" value={form.classId} onChange={v=>set('classId',v)} options={classes.map(c=>({value:c.id,label:c.name}))}/></div>
+      <div className="grid grid-cols-2 gap-3"><Inp label="이름" value={form.name} onChange={v=>set('name',v)} required/><Sel label="반" value={form.classId} onChange={v=>set('classId',v)} options={sortClasses(classes,sections).map(c=>({value:c.id,label:c.name}))}/></div>
       <div className="grid grid-cols-3 gap-3"><Inp label="학년" value={form.grade} onChange={v=>set('grade',v)}/><Sel label="성별" value={form.gender} onChange={v=>set('gender',v)} options={[{value:'',label:'선택 안 함'},{value:'남',label:'남'},{value:'여',label:'여'}]}/><Inp label="생년월일" type="date" value={form.birthDate} onChange={v=>set('birthDate',v)}/></div>
       <Inp label="학생 연락처" value={form.phone} onChange={v=>set('phone',v)}/>
       <Inp label="부모님 연락처" value={form.parentPhone} onChange={v=>set('parentPhone',v)}/>
@@ -1230,7 +1238,7 @@ const MPTeachers=({teachers,setTeachers,students,classes,sections})=>{
   const TForm=({initial,onClose,onSave})=>{
     const [f,setF]=useState(initial||{name:'',classId:classes[0]?.id||'',phone:'',email:'',memo:''});
     const set=(k,v)=>setF(p=>({...p,[k]:v}));
-    return <div className="space-y-3"><div className="grid grid-cols-2 gap-3"><Inp label="이름" value={f.name} onChange={v=>set('name',v)} required/><Sel label="담당 반" value={f.classId} onChange={v=>set('classId',v)} options={classes.map(c=>({value:c.id,label:c.name}))}/></div><Inp label="연락처" value={f.phone} onChange={v=>set('phone',v)}/><Inp label="이메일" type="email" value={f.email} onChange={v=>set('email',v)}/><Inp label="메모" value={f.memo} onChange={v=>set('memo',v)}/><div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.name)return alert('이름 입력');onSave(f);onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">저장</button></div></div>;
+    return <div className="space-y-3"><div className="grid grid-cols-2 gap-3"><Inp label="이름" value={f.name} onChange={v=>set('name',v)} required/><Sel label="담당 반" value={f.classId} onChange={v=>set('classId',v)} options={sortClasses(classes,sections).map(c=>({value:c.id,label:c.name}))}/></div><Inp label="연락처" value={f.phone} onChange={v=>set('phone',v)}/><Inp label="이메일" type="email" value={f.email} onChange={v=>set('email',v)}/><Inp label="메모" value={f.memo} onChange={v=>set('memo',v)}/><div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.name)return alert('이름 입력');onSave(f);onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">저장</button></div></div>;
   };
   return <div className="space-y-4">
     <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">선생님</h2><button onClick={()=>setShowAdd(true)} className="px-3 py-1.5 bg-[#1a1a1a] text-white rounded-xl text-sm">+ 추가</button></div>
