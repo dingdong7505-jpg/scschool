@@ -336,6 +336,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
   const [mobileMenu,setMobileMenu]=useState(false);
   const [showPrayerForm,setShowPrayerForm]=useState(false);
   const [prayerDetail,setPrayerDetail]=useState(null);
+  const [prayerShowCount,setPrayerShowCount]=useState(3);
   const [lb,setLb]=useState(null);
   const [secDetail,setSecDetail]=useState(null);
 
@@ -650,16 +651,29 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
               <h2 className="text-2xl font-bold text-gray-900">기도제목 🙏</h2>
               <button onClick={()=>setShowPrayerForm(true)} className="text-sm text-[#b8934a] font-medium hover:underline">+ 등록</button>
             </div>
-            <div className="space-y-3">
-              {prayers.filter(p=>!p.answered).slice(0,3).map(p=>(
-                <div key={p.id} onClick={()=>setPrayerDetail(p)} className="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-                  <p className="font-semibold text-gray-900 mb-1">{p.title}</p>
-                  <p className="text-sm text-gray-500 line-clamp-2">{p.content}</p>
-                  <p className="text-xs text-gray-400 mt-2">{p.author} · {fmt(p.date)}</p>
+            {(()=>{
+              const activePrayers=prayers.filter(p=>!p.answered);
+              const shown=activePrayers.slice(0,prayerShowCount);
+              return <>
+                <div className="space-y-3">
+                  {shown.map(p=>(
+                    <div key={p.id} onClick={()=>setPrayerDetail(p)} className="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
+                      <p className="font-semibold text-gray-900 mb-1">{p.title}</p>
+                      <p className="text-sm text-gray-500 line-clamp-2">{p.content}</p>
+                      <p className="text-xs text-gray-400 mt-2">{p.author} · {fmt(p.date)}</p>
+                    </div>
+                  ))}
+                  {activePrayers.length===0&&<p className="text-gray-400 text-sm">등록된 기도제목이 없습니다.</p>}
                 </div>
-              ))}
-              {prayers.filter(p=>!p.answered).length===0&&<p className="text-gray-400 text-sm">등록된 기도제목이 없습니다.</p>}
-            </div>
+                {shown.length<activePrayers.length&&
+                  <div className="flex justify-center mt-4">
+                    <button onClick={()=>setPrayerShowCount(c=>c+6)} className="px-5 py-2 border border-gray-200 rounded-full text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                      더 보기 (<span className="text-[#b8934a] font-medium">{shown.length}</span>/{activePrayers.length}) ⌄
+                    </button>
+                  </div>
+                }
+              </>;
+            })()}
           </div>
         </div>
       </section>
