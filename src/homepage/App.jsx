@@ -1180,7 +1180,7 @@ const MPStats=({students,classes,sections,attendance})=>{
     <h2 className="font-bold text-gray-900 text-lg">통계</h2>
     <div className="grid grid-cols-2 gap-3">
       <div className="bg-gray-50 rounded-2xl p-4 text-center"><p className="text-3xl font-bold text-[#b8934a]">{active.length}</p><p className="text-xs text-gray-500 mt-1">재적 인원</p></div>
-      <div className="bg-gray-50 rounded-2xl p-4 text-center"><p className="text-3xl font-bold text-[#3d6b4f]">{totR?Math.round(totP/totR*100):0}%</p><p className="text-xs text-gray-500 mt-1">전체 출석률</p></div>
+      <div className="bg-gray-50 rounded-2xl p-4 text-center"><p className="text-3xl font-bold text-[#3d6b4f]">{totR?Math.round(totP/totR*100):0}%</p><p className="text-xs text-gray-500 mt-1">전체 출석률 ({totP}/{totR}회)</p></div>
     </div>
     <div className="bg-gray-50 rounded-2xl p-4">
       <h3 className="font-semibold text-gray-800 mb-3 text-sm">월별 출석률</h3>
@@ -1200,7 +1200,7 @@ const MPStats=({students,classes,sections,attendance})=>{
         const recent=Object.entries(attendance).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,8);
         let t=0,p=0;recent.forEach(([,r])=>ss.forEach(s=>{if(r[s.id]){t++;if(r[s.id]==='출석')p++;}}));
         const rate=t?Math.round(p/t*100):0;
-        return <div key={sec.id} className="mb-2"><div className="flex justify-between text-xs mb-1"><span className="font-medium">{sec.emoji} {sec.name} ({ss.length}명)</span><span className="font-bold text-[#b8934a]">{rate}%</span></div><div className="h-2 bg-gray-200 rounded-full overflow-hidden"><div className="h-full rounded-full bg-[#b8934a] transition-all" style={{width:`${rate}%`}}/></div></div>;
+        return <div key={sec.id} className="mb-2"><div className="flex justify-between text-xs mb-1"><span className="font-medium">{sec.emoji} {sec.name} ({ss.length}명)</span><span className="font-bold text-[#b8934a]">{rate}% <span className="text-gray-400 font-normal">({p}/{t}회)</span></span></div><div className="h-2 bg-gray-200 rounded-full overflow-hidden"><div className="h-full rounded-full bg-[#b8934a] transition-all" style={{width:`${rate}%`}}/></div></div>;
       })}
     </div>
     <div className="bg-gray-50 rounded-2xl p-4">
