@@ -335,6 +335,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
   const [activeSec,setActiveSec]=useState(null); // null = 전체
   const [mobileMenu,setMobileMenu]=useState(false);
   const [showPrayerForm,setShowPrayerForm]=useState(false);
+  const [prayerDetail,setPrayerDetail]=useState(null);
   const [lb,setLb]=useState(null);
   const [secDetail,setSecDetail]=useState(null);
 
@@ -651,7 +652,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
             </div>
             <div className="space-y-3">
               {prayers.filter(p=>!p.answered).slice(0,3).map(p=>(
-                <div key={p.id} className="bg-white rounded-2xl p-4 shadow-sm">
+                <div key={p.id} onClick={()=>setPrayerDetail(p)} className="bg-white rounded-2xl p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
                   <p className="font-semibold text-gray-900 mb-1">{p.title}</p>
                   <p className="text-sm text-gray-500 line-clamp-2">{p.content}</p>
                   <p className="text-xs text-gray-400 mt-2">{p.author} · {fmt(p.date)}</p>
@@ -731,6 +732,13 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
 
       {/* 기도제목 등록 모달 */}
       {showPrayerForm&&<PrayerFormModal onClose={()=>setShowPrayerForm(false)}/>}
+      {prayerDetail&&<Modal title={prayerDetail.title} onClose={()=>setPrayerDetail(null)}>
+        <div className="space-y-3">
+          <p className="text-sm text-gray-700 whitespace-pre-wrap">{prayerDetail.content}</p>
+          <p className="text-xs text-gray-400">{prayerDetail.author} · {fmt(prayerDetail.date)}</p>
+          <button onClick={()=>setPrayerDetail(null)} className="w-full py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">닫기</button>
+        </div>
+      </Modal>}
     </div>
   );
 };
