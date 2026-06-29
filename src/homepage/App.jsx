@@ -990,8 +990,22 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
       dates.forEach(date=>{const s=attendance[date][st.id];if(s){cnt[s]=(cnt[s]||0)+1;total++;}});
       return {부서:sc?.name||'',반:c?.name||'',이름:st.name,재적여부:st.active?'재적':'제적',출석:cnt.출석,결석:cnt.결석,조퇴:cnt.조퇴,공결:cnt.공결,체크된횟수:total,출석률:total?`${Math.round(cnt.출석/total*100)}%`:''};
     });
+    const sortedScopeStudents=[...scopeStudents].sort((a,b)=>{
+      const ca=classes.find(c=>c.id===a.classId),cb=classes.find(c=>c.id===b.classId);
+      const sa=sections.findIndex(s=>s.id===ca?.sectionId),sb=sections.findIndex(s=>s.id===cb?.sectionId);
+      if(sa!==sb)return sa-sb;
+      const ga=gradeNumOf(ca?.name||''),gb=gradeNumOf(cb?.name||'');
+      return ga!==gb?ga-gb:a.name.localeCompare(b.name);
+    });
+    const rosterRows=sortedScopeStudents.map(st=>{
+      const c=classes.find(c=>c.id===st.classId);
+      const sc=sections.find(se=>se.id===c?.sectionId);
+      const row={부서:sc?.name||'',반:c?.name||'',이름:st.name};
+      dates.forEach(date=>{row[fmt(date)]=attendance[date][st.id]||'';});
+      return row;
+    });
     const scopeLabel=exportSec==='all'?'전체':(sections.find(s=>s.id===exportSec)?.name||'');
-    exportXLSXMulti([{name:'학생별 통계',rows:summaryRows},{name:'전체 출석기록',rows:logRows}],`출석체크_${scopeLabel}_${todayStr()}.xlsx`);
+    exportXLSXMulti([{name:'출석부',rows:rosterRows},{name:'학생별 통계',rows:summaryRows},{name:'전체 출석기록',rows:logRows}],`출석체크_${scopeLabel}_${todayStr()}.xlsx`);
   };
 
   return (
