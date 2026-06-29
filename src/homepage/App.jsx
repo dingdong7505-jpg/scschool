@@ -1001,7 +1001,7 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
       const c=classes.find(c=>c.id===st.classId);
       const sc=sections.find(se=>se.id===c?.sectionId);
       const row={부서:sc?.name||'',반:c?.name||'',이름:st.name};
-      dates.forEach(date=>{row[fmt(date)]=attendance[date][st.id]||'';});
+      dates.forEach(date=>{row[fmt(date)]=attendance[date][st.id]||'결석';});
       return row;
     });
     const scopeLabel=exportSec==='all'?'전체':(sections.find(s=>s.id===exportSec)?.name||'');
