@@ -945,7 +945,10 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
   const secClasses=sortClasses(classes.filter(c=>c.sectionId===selSec),sections);
   const changeSec=v=>{setSelSec(v);const first=sortClasses(classes.filter(c=>c.sectionId===v),sections)[0];setSelCls(first?.id||'');setSaved(false);};
   const CYCLE={'출석':'결석','결석':'조퇴','조퇴':'공결','공결':'출석'};
-  const clsSts=students.filter(s=>s.classId===selCls&&s.active);
+  const secClassIds=secClasses.map(c=>c.id);
+  const clsSts=selCls==='all'
+    ? students.filter(s=>secClassIds.includes(s.classId)&&s.active)
+    : students.filter(s=>s.classId===selCls&&s.active);
   const recs=attendance[selDate]||{};
 
   // 같은 날짜라도 다른 반/학생을 동시에 체크하는 다른 교사의 변경이 덮어써지지 않도록,
@@ -964,8 +967,8 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
   const setAll=st=>{commitAttendance(selDate,day=>{const nr={...day};clsSts.forEach(s=>nr[s.id]=st);return nr;});setSaved(false);};
   const counts={출석:0,결석:0,조퇴:0,공결:0,미입력:0};
   clsSts.forEach(s=>{const st=recs[s.id];st?counts[st]++:counts['미입력']++;});
-  const cls=classes.find(c=>c.id===selCls);
-  const sec=sections.find(s=>s.id===cls?.sectionId);
+  const cls=selCls==='all'?null:classes.find(c=>c.id===selCls);
+  const sec=sections.find(s=>s.id===(selCls==='all'?selSec:cls?.sectionId));
 
   const exportAttendance=()=>{
     const dates=Object.keys(attendance).sort();
@@ -1017,9 +1020,9 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
           <input type="date" value={selDate} onChange={e=>{setSelDate(e.target.value);setSaved(false);}} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#b8934a]"/>
         </div>
         <Sel label="부서" value={selSec} onChange={changeSec} options={sections.map(s=>({value:s.id,label:`${s.emoji} ${s.name}`}))}/>
-        <Sel label="반" value={selCls} onChange={v=>{setSelCls(v);setSaved(false);}} options={secClasses.map(c=>({value:c.id,label:c.name}))}/>
+        <Sel label="반" value={selCls} onChange={v=>{setSelCls(v);setSaved(false);}} options={[{value:'all',label:'전체'},...secClasses.map(c=>({value:c.id,label:c.name}))]}/>
       </div>
-      {sec&&<div className="text-xs text-gray-400">{sec.emoji} {sec.name} → {cls?.name}</div>}
+      {sec&&<div className="text-xs text-gray-400">{sec.emoji} {sec.name} → {cls?.name||'전체'}</div>}
       <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
         <label className="text-xs font-medium text-gray-600 block mb-1.5">엑셀 다운로드 범위</label>
         <div className="flex gap-2">
@@ -1040,7 +1043,25 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
       </div>
       <div className="flex gap-2"><button onClick={()=>setAll('출석')} className="flex-1 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50">전원 출석</button><button onClick={()=>setAll('결석')} className="flex-1 py-2 text-sm border border-gray-200 rounded-xl hover:bg-gray-50">전원 결석</button></div>
       <div className="space-y-2">
-        {clsSts.map(s=>{
+        {selCls==='all'?secClasses.map(c=>{
+          const csts=clsSts.filter(s=>s.classId===c.id);
+          if(!csts.length)return null;
+          return <div key={c.id} className="space-y-2 mb-3">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{c.name} <span className="font-normal text-gray-400">({csts.length}명)</span></p>
+            {csts.map(s=>{
+              const st=recs[s.id];
+              return (
+                <div key={s.id} onClick={()=>toggle(s.id)} className="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer select-none transition-all active:scale-[0.98]"
+                  style={{background:st?({출석:'#f0fdf4',결석:'#fef2f2',조퇴:'#fefce8',공결:'#eff6ff'}[st]):'white',borderColor:st?({출석:'#86efac',결석:'#fca5a5',조퇴:'#fde047',공결:'#93c5fd'}[st]):'#e5e7eb'}}>
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
+                    style={{background:st?({출석:'#22c55e',결석:'#ef4444',조퇴:'#eab308',공결:'#3b82f6'}[st]):'#d1d5db'}}>{s.name[0]}</div>
+                  <div className="flex-1"><p className="font-medium text-sm">{s.name}</p><p className="text-xs text-gray-400">{s.grade}</p></div>
+                  <span className="text-sm font-bold" style={{color:st?({출석:'#16a34a',결석:'#dc2626',조퇴:'#ca8a04',공결:'#2563eb'}[st]):'#9ca3af'}}>{st||'탭하여 입력'}</span>
+                </div>
+              );
+            })}
+          </div>;
+        }):clsSts.map(s=>{
           const st=recs[s.id];
           return (
             <div key={s.id} onClick={()=>toggle(s.id)} className="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer select-none transition-all active:scale-[0.98]"
