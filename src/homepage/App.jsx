@@ -938,8 +938,12 @@ const MPDashboard=({students,classes,sections,attendance,meetings,nav})=>{
 
 const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
   const [selDate,setSelDate]=useState(todayStr());
+  const [selSec,setSelSec]=useState(classes[0]?.sectionId||'');
   const [selCls,setSelCls]=useState(classes[0]?.id||'');
+  const [exportSec,setExportSec]=useState('all');
   const [saved,setSaved]=useState(false);
+  const secClasses=sortClasses(classes.filter(c=>c.sectionId===selSec),sections);
+  const changeSec=v=>{setSelSec(v);const first=sortClasses(classes.filter(c=>c.sectionId===v),sections)[0];setSelCls(first?.id||'');setSaved(false);};
   const CYCLE={'출석':'결석','결석':'조퇴','조퇴':'공결','공결':'출석'};
   const clsSts=students.filter(s=>s.classId===selCls&&s.active);
   const recs=attendance[selDate]||{};
@@ -965,18 +969,20 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
 
   const exportAttendance=()=>{
     const dates=Object.keys(attendance).sort();
+    const scopeStudents=exportSec==='all'?students:students.filter(s=>classes.find(c=>c.id===s.classId)?.sectionId===exportSec);
+    const scopeIds=new Set(scopeStudents.map(s=>s.id));
     const logRows=[];
     dates.forEach(date=>{
       Object.entries(attendance[date]).forEach(([sid,status])=>{
         const st=students.find(s=>s.id===Number(sid)||s.id===sid);
-        if(!st)return;
+        if(!st||!scopeIds.has(st.id))return;
         const c=classes.find(c=>c.id===st.classId);
         const sc=sections.find(se=>se.id===c?.sectionId);
         logRows.push({날짜:date,부서:sc?.name||'',반:c?.name||'',이름:st.name,상태:status});
       });
     });
     if(!logRows.length)return alert('내보낼 출석 기록이 없습니다.');
-    const summaryRows=students.map(st=>{
+    const summaryRows=scopeStudents.map(st=>{
       const c=classes.find(c=>c.id===st.classId);
       const sc=sections.find(se=>se.id===c?.sectionId);
       const cnt={출석:0,결석:0,조퇴:0,공결:0};
@@ -984,20 +990,32 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
       dates.forEach(date=>{const s=attendance[date][st.id];if(s){cnt[s]=(cnt[s]||0)+1;total++;}});
       return {부서:sc?.name||'',반:c?.name||'',이름:st.name,재적여부:st.active?'재적':'제적',출석:cnt.출석,결석:cnt.결석,조퇴:cnt.조퇴,공결:cnt.공결,체크된횟수:total,출석률:total?`${Math.round(cnt.출석/total*100)}%`:''};
     });
-    exportXLSXMulti([{name:'학생별 통계',rows:summaryRows},{name:'전체 출석기록',rows:logRows}],`출석체크_누적_${todayStr()}.xlsx`);
+    const scopeLabel=exportSec==='all'?'전체':(sections.find(s=>s.id===exportSec)?.name||'');
+    exportXLSXMulti([{name:'학생별 통계',rows:summaryRows},{name:'전체 출석기록',rows:logRows}],`출석체크_${scopeLabel}_${todayStr()}.xlsx`);
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">출석체크</h2><div className="flex gap-2"><button onClick={()=>{if(confirm('모든 출석 기록을 초기화할까요? 되돌릴 수 없습니다.'))setAttendance({});}} className="px-3 py-1.5 border border-red-200 text-red-500 rounded-xl text-xs font-medium hover:bg-red-50">전체 초기화</button><button onClick={exportAttendance} className="px-3 py-1.5 bg-[#3d6b4f] text-white rounded-xl text-xs font-medium hover:bg-[#2d5240]">⬇ 엑셀 다운로드</button></div></div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">출석체크</h2><button onClick={()=>{if(confirm('모든 출석 기록을 초기화할까요? 되돌릴 수 없습니다.'))setAttendance({});}} className="px-3 py-1.5 border border-red-200 text-red-500 rounded-xl text-xs font-medium hover:bg-red-50">전체 초기화</button></div>
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="text-xs font-medium text-gray-600 block mb-1">날짜</label>
           <input type="date" value={selDate} onChange={e=>{setSelDate(e.target.value);setSaved(false);}} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[#b8934a]"/>
         </div>
-        <Sel label="반" value={selCls} onChange={v=>{setSelCls(v);setSaved(false);}} options={sortClasses(classes,sections).map(c=>({value:c.id,label:c.name}))}/>
+        <Sel label="부서" value={selSec} onChange={changeSec} options={sections.map(s=>({value:s.id,label:`${s.emoji} ${s.name}`}))}/>
+        <Sel label="반" value={selCls} onChange={v=>{setSelCls(v);setSaved(false);}} options={secClasses.map(c=>({value:c.id,label:c.name}))}/>
       </div>
       {sec&&<div className="text-xs text-gray-400">{sec.emoji} {sec.name} → {cls?.name}</div>}
+      <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+        <label className="text-xs font-medium text-gray-600 block mb-1.5">엑셀 다운로드 범위</label>
+        <div className="flex gap-2">
+          <select value={exportSec} onChange={e=>setExportSec(e.target.value)} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#b8934a] bg-white">
+            <option value="all">전체</option>
+            {sections.map(s=><option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}
+          </select>
+          <button onClick={exportAttendance} className="px-4 py-2 bg-[#3d6b4f] text-white rounded-xl text-sm font-medium hover:bg-[#2d5240] flex-shrink-0">⬇ 엑셀 다운로드</button>
+        </div>
+      </div>
       <div className="grid grid-cols-4 gap-2 text-center text-xs">
         {['출석','결석','조퇴','공결'].map(k=>(
           <div key={k} className="rounded-xl p-2.5 border" style={{background:k==='출석'?'#f0fdf4':k==='결석'?'#fef2f2':k==='조퇴'?'#fefce8':'#eff6ff',borderColor:k==='출석'?'#bbf7d0':k==='결석'?'#fecaca':k==='조퇴'?'#fef08a':'#bfdbfe'}}>
