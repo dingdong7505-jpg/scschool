@@ -77,6 +77,14 @@ const exportXLSX = (rows, filename, sheetName = 'Sheet1') => {
   XLSX.writeFile(wb, filename);
 };
 
+const exportXLSXMulti = (sheets, filename) => {
+  const wb = XLSX.utils.book_new();
+  sheets.forEach(({ name, rows }) => {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), name);
+  });
+  XLSX.writeFile(wb, filename);
+};
+
 // ── 데이터 ──────────────────────────────────────────────
 const DEFAULT_SITE = {
   churchName: '신천교회 교회학교',
@@ -956,18 +964,27 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
   const sec=sections.find(s=>s.id===cls?.sectionId);
 
   const exportAttendance=()=>{
-    const rows=[];
-    Object.entries(attendance).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([date,recs])=>{
-      Object.entries(recs).forEach(([sid,status])=>{
+    const dates=Object.keys(attendance).sort();
+    const logRows=[];
+    dates.forEach(date=>{
+      Object.entries(attendance[date]).forEach(([sid,status])=>{
         const st=students.find(s=>s.id===Number(sid)||s.id===sid);
         if(!st)return;
         const c=classes.find(c=>c.id===st.classId);
         const sc=sections.find(se=>se.id===c?.sectionId);
-        rows.push({날짜:date,부서:sc?.name||'',반:c?.name||'',이름:st.name,상태:status});
+        logRows.push({날짜:date,부서:sc?.name||'',반:c?.name||'',이름:st.name,상태:status});
       });
     });
-    if(!rows.length)return alert('내보낼 출석 기록이 없습니다.');
-    exportXLSX(rows,`출석체크_${todayStr()}.xlsx`,'출석체크');
+    if(!logRows.length)return alert('내보낼 출석 기록이 없습니다.');
+    const summaryRows=students.map(st=>{
+      const c=classes.find(c=>c.id===st.classId);
+      const sc=sections.find(se=>se.id===c?.sectionId);
+      const cnt={출석:0,결석:0,조퇴:0,공결:0};
+      let total=0;
+      dates.forEach(date=>{const s=attendance[date][st.id];if(s){cnt[s]=(cnt[s]||0)+1;total++;}});
+      return {부서:sc?.name||'',반:c?.name||'',이름:st.name,재적여부:st.active?'재적':'제적',출석:cnt.출석,결석:cnt.결석,조퇴:cnt.조퇴,공결:cnt.공결,체크된횟수:total,출석률:total?`${Math.round(cnt.출석/total*100)}%`:''};
+    });
+    exportXLSXMulti([{name:'학생별 통계',rows:summaryRows},{name:'전체 출석기록',rows:logRows}],`출석체크_누적_${todayStr()}.xlsx`);
   };
 
   return (
