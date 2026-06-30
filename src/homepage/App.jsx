@@ -345,6 +345,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
   const [showPrayerForm,setShowPrayerForm]=useState(false);
   const [prayerDetail,setPrayerDetail]=useState(null);
   const [eventDetail,setEventDetail]=useState(null);
+  const [eventPage,setEventPage]=useState(0);
   const [prayerShowCount,setPrayerShowCount]=useState(3);
   const [lb,setLb]=useState(null);
   const [secDetail,setSecDetail]=useState(null);
@@ -608,16 +609,32 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
             </div>
             <div className="grid md:grid-cols-[3fr_2fr] gap-6 items-start">
               <MiniCalendar events={events} sections={sections}/>
-              <div className="space-y-2 min-w-0">
-                {events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(e=>(
-                  <div key={e.id} onClick={()=>setEventDetail(e)} className="flex items-center gap-2.5 bg-[#faf7f2] rounded-xl p-2 cursor-pointer hover:shadow-sm transition-shadow">
-                    <div className="w-9 h-9 rounded-lg text-white flex flex-col items-center justify-center flex-shrink-0" style={{background:sectionColorOf(sections,e.sectionId)}}>
-                      <span className="text-[8px] leading-none opacity-80">{e.date.slice(5,7)}월</span>
-                      <span className="text-sm font-bold leading-none">{e.date.slice(8,10)}</span>
+              <div className="min-w-0">
+                {(()=>{
+                  const upcoming=events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date));
+                  const perPage=6;
+                  const pageCount=Math.ceil(upcoming.length/perPage);
+                  const page=Math.min(eventPage,pageCount-1);
+                  const pageItems=upcoming.slice(page*perPage,page*perPage+perPage);
+                  return <>
+                    <div className="space-y-2">
+                      {pageItems.map(e=>(
+                        <div key={e.id} onClick={()=>setEventDetail(e)} className="flex items-center gap-2.5 bg-[#faf7f2] rounded-xl p-2 cursor-pointer hover:shadow-sm transition-shadow">
+                          <div className="w-9 h-9 rounded-lg text-white flex flex-col items-center justify-center flex-shrink-0" style={{background:sectionColorOf(sections,e.sectionId)}}>
+                            <span className="text-[10px] leading-none opacity-80">{e.date.slice(5,7)}월</span>
+                            <span className="text-sm font-bold leading-none">{e.date.slice(8,10)}</span>
+                          </div>
+                          <div className="flex-1 min-w-0"><p className="font-bold text-gray-900 text-xs truncate">{e.title}</p>{e.desc&&<p className="text-[11px] text-gray-500 mt-0.5 truncate">{e.desc}</p>}</div>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex-1 min-w-0"><p className="font-bold text-gray-900 text-xs truncate">{e.title}</p>{e.desc&&<p className="text-[11px] text-gray-500 mt-0.5 truncate">{e.desc}</p>}</div>
-                  </div>
-                ))}
+                    {pageCount>1&&<div className="flex justify-center gap-1.5 mt-3">
+                      {Array.from({length:pageCount},(_,i)=>(
+                        <button key={i} onClick={()=>setEventPage(i)} className={`w-7 h-7 rounded-full text-xs font-medium transition-colors ${i===page?'bg-[#1a1a1a] text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{i+1}</button>
+                      ))}
+                    </div>}
+                  </>;
+                })()}
               </div>
             </div>
           </div>
