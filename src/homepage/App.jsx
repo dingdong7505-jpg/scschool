@@ -344,6 +344,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
   const [mobileMenu,setMobileMenu]=useState(false);
   const [showPrayerForm,setShowPrayerForm]=useState(false);
   const [prayerDetail,setPrayerDetail]=useState(null);
+  const [eventDetail,setEventDetail]=useState(null);
   const [prayerShowCount,setPrayerShowCount]=useState(3);
   const [lb,setLb]=useState(null);
   const [secDetail,setSecDetail]=useState(null);
@@ -607,9 +608,9 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
             </div>
             <div className="grid md:grid-cols-[3fr_2fr] gap-6 items-start">
               <MiniCalendar events={events} sections={sections}/>
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 min-w-0">
                 {events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(e=>(
-                  <div key={e.id} className="flex items-center gap-3 bg-[#faf7f2] rounded-xl p-3">
+                  <div key={e.id} onClick={()=>setEventDetail(e)} className="flex items-center gap-3 bg-[#faf7f2] rounded-xl p-3 cursor-pointer hover:shadow-sm transition-shadow">
                     <div className="w-11 h-11 rounded-lg text-white flex flex-col items-center justify-center flex-shrink-0" style={{background:sectionColorOf(sections,e.sectionId)}}>
                       <span className="text-[9px] leading-none opacity-80">{e.date.slice(5,7)}월</span>
                       <span className="text-base font-bold leading-none">{e.date.slice(8,10)}</span>
@@ -759,6 +760,16 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
           <p className="text-sm text-gray-700 whitespace-pre-wrap">{prayerDetail.content}</p>
           <p className="text-xs text-gray-400">{prayerDetail.author} · {fmt(prayerDetail.date)}</p>
           <button onClick={()=>setPrayerDetail(null)} className="w-full py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">닫기</button>
+        </div>
+      </Modal>}
+      {eventDetail&&<Modal title={eventDetail.title} onClose={()=>setEventDetail(null)}>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="px-2 py-1 rounded-full text-white font-medium" style={{background:sectionColorOf(sections,eventDetail.sectionId)}}>{fmt(eventDetail.date)}</span>
+            <span className="text-gray-400">{sections.find(s=>s.id===eventDetail.sectionId)?.name||'전체/공통'}</span>
+          </div>
+          {eventDetail.desc&&<p className="text-sm text-gray-700 whitespace-pre-wrap">{eventDetail.desc}</p>}
+          <button onClick={()=>setEventDetail(null)} className="w-full py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">닫기</button>
         </div>
       </Modal>}
     </div>
