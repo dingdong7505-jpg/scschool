@@ -608,14 +608,14 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
             </div>
             <div className="grid md:grid-cols-[3fr_2fr] gap-6 items-start">
               <MiniCalendar events={events} sections={sections}/>
-              <div className="space-y-2.5 min-w-0">
+              <div className="space-y-2 min-w-0">
                 {events.filter(e=>e.date>=todayStr()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(e=>(
-                  <div key={e.id} onClick={()=>setEventDetail(e)} className="flex items-center gap-3 bg-[#faf7f2] rounded-xl p-3 cursor-pointer hover:shadow-sm transition-shadow">
-                    <div className="w-11 h-11 rounded-lg text-white flex flex-col items-center justify-center flex-shrink-0" style={{background:sectionColorOf(sections,e.sectionId)}}>
-                      <span className="text-[9px] leading-none opacity-80">{e.date.slice(5,7)}월</span>
-                      <span className="text-base font-bold leading-none">{e.date.slice(8,10)}</span>
+                  <div key={e.id} onClick={()=>setEventDetail(e)} className="flex items-center gap-2.5 bg-[#faf7f2] rounded-xl p-2 cursor-pointer hover:shadow-sm transition-shadow">
+                    <div className="w-9 h-9 rounded-lg text-white flex flex-col items-center justify-center flex-shrink-0" style={{background:sectionColorOf(sections,e.sectionId)}}>
+                      <span className="text-[8px] leading-none opacity-80">{e.date.slice(5,7)}월</span>
+                      <span className="text-sm font-bold leading-none">{e.date.slice(8,10)}</span>
                     </div>
-                    <div className="flex-1 min-w-0"><p className="font-bold text-gray-900 text-sm truncate">{e.title}</p>{e.desc&&<p className="text-xs text-gray-500 mt-0.5 truncate">{e.desc}</p>}</div>
+                    <div className="flex-1 min-w-0"><p className="font-bold text-gray-900 text-xs truncate">{e.title}</p>{e.desc&&<p className="text-[11px] text-gray-500 mt-0.5 truncate">{e.desc}</p>}</div>
                   </div>
                 ))}
               </div>
@@ -700,7 +700,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {filteredPhotos.map((p,i)=>(
               <div key={p.id} onClick={()=>setLb(p)} className="aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center group cursor-pointer hover:shadow-lg transition-all relative">
                 {p.src?<img src={p.src} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>:(
