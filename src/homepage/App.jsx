@@ -306,11 +306,11 @@ const MiniCalendar=({events,sections})=>{
   return (
     <div className="bg-[#faf7f2] rounded-2xl p-3">
       <div className="flex items-center justify-between mb-3">
-        <button onClick={goPrev} className="w-7 h-7 rounded-full hover:bg-black/5 text-gray-500 flex items-center justify-center">‹</button>
-        <button onClick={goToday} className="font-bold text-gray-900 text-sm hover:text-[#b8934a] transition-colors">{year}년 {month+1}월</button>
-        <button onClick={goNext} className="w-7 h-7 rounded-full hover:bg-black/5 text-gray-500 flex items-center justify-center">›</button>
+        <button onClick={goPrev} className="w-8 h-8 rounded-full hover:bg-black/5 text-gray-500 flex items-center justify-center text-lg">‹</button>
+        <button onClick={goToday} className="font-bold text-gray-900 text-base hover:text-[#b8934a] transition-colors">{year}년 {month+1}월</button>
+        <button onClick={goNext} className="w-8 h-8 rounded-full hover:bg-black/5 text-gray-500 flex items-center justify-center text-lg">›</button>
       </div>
-      <div className="grid grid-cols-7 text-center text-[10px] text-gray-400 mb-1">
+      <div className="grid grid-cols-7 text-center text-xs text-gray-400 mb-1">
         {['일','월','화','수','목','금','토'].map(d=><span key={d}>{d}</span>)}
       </div>
       <div className="grid grid-cols-7 gap-[2px]">
@@ -318,11 +318,11 @@ const MiniCalendar=({events,sections})=>{
           const isToday=d===today.getDate()&&year===today.getFullYear()&&month===today.getMonth();
           const dayEvents=d?(eventsByDay[d]||[]):[];
           return (
-            <div key={i} className="min-h-[44px] rounded-md p-0.5">
-              {d&&<span className={`text-[13px] inline-flex items-center justify-center w-5 h-5 rounded-full ${isToday?'bg-[#1a1a1a] text-white font-bold':'text-gray-700'}`}>{d}</span>}
+            <div key={i} className="min-h-[52px] rounded-md p-0.5">
+              {d&&<span className={`text-base inline-flex items-center justify-center w-7 h-7 rounded-full ${isToday?'bg-[#1a1a1a] text-white font-bold':'text-gray-700'}`}>{d}</span>}
               <div className="space-y-0.5 mt-0.5">
                 {dayEvents.slice(0,2).map(e=>(
-                  <div key={e.id} className="flex items-center gap-0.5 text-[8px] leading-tight truncate" style={{color:sectionColorOf(sections,e.sectionId)}}>
+                  <div key={e.id} className="flex items-center gap-0.5 text-[10px] leading-tight truncate" style={{color:sectionColorOf(sections,e.sectionId)}}>
                     <span className="w-1 h-1 rounded-full flex-shrink-0" style={{background:sectionColorOf(sections,e.sectionId)}}/>
                     <span className="truncate">{e.title}</span>
                   </div>
