@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { logLogin, fetchSharedState, pushSharedState, sendOtp, verifyOtp } from '../supabaseClient.js';
+import { notifyTeacherRequest } from '../emailClient.js';
 
 // 여러 사람이 동시에 같은 목록(학생/사진 등)을 고칠 때 서로 덮어쓰지 않도록,
 // 저장 직전 서버의 최신 값을 받아와 이번 변경(mutate)만 적용해서 다시 올린다.
@@ -1814,6 +1815,7 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
     const role = form.wantsTeacher ? 'teacher_pending' : 'member';
     const name = form.name.trim(), email = form.email.trim(), passwordHash = hashPw(form.password);
     mergeArrayWrite('accounts_v3', setAccounts, p => [...p, { id: nextId(p), name, email, passwordHash, role }]);
+    if (role === 'teacher_pending') notifyTeacherRequest({ name, email });
     onSuccess({ name, email, provider: 'email', role });
   };
 
