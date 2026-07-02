@@ -1182,11 +1182,11 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
   const bySection=useMemo(()=>{
     return sections.map(sec=>{
       const secClasses=classes.filter(c=>c.sectionId===sec.id).slice().sort((a,b)=>gradeNum(a.name)-gradeNum(b.name));
-      const classGroups=secClasses.map(cls=>({cls,students:filtered.filter(s=>s.classId===cls.id).slice().sort((a,b)=>gradeNum(a.grade||'')-gradeNum(b.grade||''))})).filter(g=>g.students.length);
+      const classGroups=secClasses.map(cls=>({cls,students:filtered.filter(s=>s.classId===cls.id).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'))})).filter(g=>g.students.length);
       return {sec,classGroups};
     }).filter(g=>g.classGroups.length);
   },[filtered,classes,sections]);
-  const unassignedStudents=useMemo(()=>filtered.filter(s=>!classes.find(c=>c.id===s.classId)),[filtered,classes]);
+  const unassignedStudents=useMemo(()=>filtered.filter(s=>!classes.find(c=>c.id===s.classId)).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko')),[filtered,classes]);
 
   const exportStudents=()=>{
     if(!students.length)return alert('내보낼 학생이 없습니다.');
