@@ -884,7 +884,7 @@ const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,s
             {page==='attendance'&&<MPAttendance students={students} classes={classes} sections={sections} attendance={attendance} setAttendance={setAttendance}/>}
             {page==='students'&&<MPStudents students={students} setStudents={setStudents} classes={classes} sections={sections} attendance={attendance}/>}
             {page==='stats'&&<MPStats students={students} classes={classes} sections={sections} attendance={attendance}/>}
-            {page==='birthday'&&<MPBirthday students={students} classes={classes}/>}
+            {page==='birthday'&&<MPBirthday students={students} teachers={teachers} classes={classes} sections={sections}/>}
             {page==='teachers'&&<MPTeachers teachers={teachers} setTeachers={setTeachers} students={students} classes={classes} sections={sections}/>}
             {page==='meetings'&&<MPMeetings meetings={meetings} setMeetings={setMeetings} sections={sections}/>}
             {page==='events'&&<MPEvents events={events} setEvents={setEvents} sections={sections}/>}
@@ -1353,17 +1353,17 @@ const MPStats=({students,classes,sections,attendance})=>{
   </div>;
 };
 
-const MPBirthday=({students,classes})=>{
-  const active=students.filter(s=>s.active&&s.birthDate);
-  const getCls=id=>classes.find(c=>c.id===id)?.name||'';
+const MPBirthday=({students,teachers,classes,sections})=>{
+  const active=[...students.filter(s=>s.active&&s.birthDate),...(teachers||[]).filter(t=>t.birthDate).map(t=>({...t,__teacher:true}))];
+  const getCls=s=>{if(!s.__teacher)return classes.find(c=>c.id===s.classId)?.name||'';const cls=classes.find(c=>c.id===s.classId);const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId));return [sec?.name,s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' ');};
   const thisWeek=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const thisMonth=active.filter(s=>isThisMonth(s.birthDate)&&!isThisWeek(s.birthDate));
   const byMonth=Array.from({length:12},(_,i)=>({month:i+1,ss:active.filter(s=>parseInt(s.birthDate.split('-')[1])===i+1)})).filter(m=>m.ss.length);
   return <div className="space-y-4">
     <h2 className="font-bold text-gray-900 text-lg">🎂 생일</h2>
-    {thisWeek.length>0&&<div><h3 className="text-sm font-semibold text-gray-700 mb-2">🎉 이번 주</h3><div className="space-y-2">{thisWeek.map(s=><div key={s.id} className="flex items-center gap-3 bg-pink-50 rounded-xl p-3 border border-pink-100"><div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center font-bold">{s.name[0]}</div><div className="flex-1"><p className="font-bold text-sm">{s.name} 🎂</p><p className="text-xs text-gray-500">{getCls(s.classId)} · {getBMMDD(s.birthDate)}</p></div><p className="font-bold text-pink-600">{fmtWeekDiff(getWeekDiff(s.birthDate))}</p></div>)}</div></div>}
-    {thisMonth.length>0&&<div><h3 className="text-sm font-semibold text-gray-700 mb-2">📅 이번 달</h3><div className="space-y-2">{thisMonth.map(s=><div key={s.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3"><div className="w-8 h-8 rounded-lg bg-[#b8934a] text-white flex items-center justify-center font-bold text-sm">{s.name[0]}</div><div className="flex-1 text-sm"><span className="font-medium">{s.name}</span><span className="text-gray-400 ml-2">{getCls(s.classId)} · {getBMMDD(s.birthDate)}</span></div><span className="text-sm font-medium text-[#b8934a]">D-{getDUB(s.birthDate)}</span></div>)}</div></div>}
-    <div><h3 className="text-sm font-semibold text-gray-700 mb-2">📆 월별</h3><div className="space-y-3">{byMonth.map(({month,ss})=><div key={month}><div className="flex items-center gap-2 mb-1"><div className="w-7 h-7 rounded-lg bg-[#1a1a1a] text-white text-xs font-bold flex items-center justify-center">{month}</div><span className="text-xs text-gray-500">{ss.length}명</span></div><div className="pl-9 space-y-1">{ss.map(s=><div key={s.id} className="flex items-center gap-2 text-xs py-1 border-b border-gray-50"><span className="font-medium text-gray-700">{s.name}</span><span className="text-gray-400">{getCls(s.classId)}</span><span className="ml-auto text-gray-500">{getBMMDD(s.birthDate)}</span></div>)}</div></div>)}</div></div>
+    {thisWeek.length>0&&<div><h3 className="text-sm font-semibold text-gray-700 mb-2">🎉 이번 주</h3><div className="space-y-2">{thisWeek.map(s=><div key={(s.__teacher?'t':'s')+s.id} className="flex items-center gap-3 bg-pink-50 rounded-xl p-3 border border-pink-100"><div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-rose-500 text-white flex items-center justify-center font-bold">{s.name[0]}</div><div className="flex-1"><p className="font-bold text-sm">{s.name} 🎂</p><p className="text-xs text-gray-500">{getCls(s)} · {getBMMDD(s.birthDate)}</p></div><p className="font-bold text-pink-600">{fmtWeekDiff(getWeekDiff(s.birthDate))}</p></div>)}</div></div>}
+    {thisMonth.length>0&&<div><h3 className="text-sm font-semibold text-gray-700 mb-2">📅 이번 달</h3><div className="space-y-2">{thisMonth.map(s=><div key={(s.__teacher?'t':'s')+s.id} className="flex items-center gap-3 bg-gray-50 rounded-xl p-3"><div className="w-8 h-8 rounded-lg bg-[#b8934a] text-white flex items-center justify-center font-bold text-sm">{s.name[0]}</div><div className="flex-1 text-sm"><span className="font-medium">{s.name}</span><span className="text-gray-400 ml-2">{getCls(s)} · {getBMMDD(s.birthDate)}</span></div><span className="text-sm font-medium text-[#b8934a]">D-{getDUB(s.birthDate)}</span></div>)}</div></div>}
+    <div><h3 className="text-sm font-semibold text-gray-700 mb-2">📆 월별</h3><div className="space-y-3">{byMonth.map(({month,ss})=><div key={month}><div className="flex items-center gap-2 mb-1"><div className="w-7 h-7 rounded-lg bg-[#1a1a1a] text-white text-xs font-bold flex items-center justify-center">{month}</div><span className="text-xs text-gray-500">{ss.length}명</span></div><div className="pl-9 space-y-1">{ss.map(s=><div key={(s.__teacher?'t':'s')+s.id} className="flex items-center gap-2 text-xs py-1 border-b border-gray-50"><span className="font-medium text-gray-700">{s.name}</span><span className="text-gray-400">{getCls(s)}</span><span className="ml-auto text-gray-500">{getBMMDD(s.birthDate)}</span></div>)}</div></div>)}</div></div>
   </div>;
 };
 
