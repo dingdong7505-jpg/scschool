@@ -975,9 +975,10 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
   const changeSec=v=>{setSelSec(v);const first=sortClasses(classes.filter(c=>c.sectionId===v),sections)[0];setSelCls(first?.id||'');setSaved(false);};
   const CYCLE={'출석':'결석','결석':'조퇴','조퇴':'공결','공결':'출석'};
   const secClassIds=secClasses.map(c=>c.id);
-  const clsSts=selCls==='all'
+  const clsSts=(selCls==='all'
     ? students.filter(s=>secClassIds.includes(s.classId)&&s.active)
-    : students.filter(s=>s.classId===selCls&&s.active);
+    : students.filter(s=>s.classId===selCls&&s.active)
+  ).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko'));
   const recs=attendance[selDate]||{};
 
   // 같은 날짜라도 다른 반/학생을 동시에 체크하는 다른 교사의 변경이 덮어써지지 않도록,
@@ -1014,20 +1015,20 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
       });
     });
     if(!logRows.length)return alert('내보낼 출석 기록이 없습니다.');
-    const summaryRows=scopeStudents.map(st=>{
+    const sortedScopeStudents=[...scopeStudents].sort((a,b)=>{
+      const ca=classes.find(c=>c.id===a.classId),cb=classes.find(c=>c.id===b.classId);
+      const sa=sections.findIndex(s=>s.id===ca?.sectionId),sb=sections.findIndex(s=>s.id===cb?.sectionId);
+      if(sa!==sb)return sa-sb;
+      const ga=gradeNumOf(ca?.name||''),gb=gradeNumOf(cb?.name||'');
+      return ga!==gb?ga-gb:(a.name||'').localeCompare(b.name||'','ko');
+    });
+    const summaryRows=sortedScopeStudents.map(st=>{
       const c=classes.find(c=>c.id===st.classId);
       const sc=sections.find(se=>se.id===c?.sectionId);
       const cnt={출석:0,결석:0,조퇴:0,공결:0};
       let total=0;
       dates.forEach(date=>{const s=attendance[date][st.id];if(s){cnt[s]=(cnt[s]||0)+1;total++;}});
       return {부서:sc?.name||'',반:c?.name||'',이름:st.name,재적여부:st.active?'재적':'제적',출석:cnt.출석,결석:cnt.결석,조퇴:cnt.조퇴,공결:cnt.공결,체크된횟수:total,출석률:total?`${Math.round(cnt.출석/total*100)}%`:''};
-    });
-    const sortedScopeStudents=[...scopeStudents].sort((a,b)=>{
-      const ca=classes.find(c=>c.id===a.classId),cb=classes.find(c=>c.id===b.classId);
-      const sa=sections.findIndex(s=>s.id===ca?.sectionId),sb=sections.findIndex(s=>s.id===cb?.sectionId);
-      if(sa!==sb)return sa-sb;
-      const ga=gradeNumOf(ca?.name||''),gb=gradeNumOf(cb?.name||'');
-      return ga!==gb?ga-gb:a.name.localeCompare(b.name);
     });
     const rosterRows=sortedScopeStudents.map(st=>{
       const c=classes.find(c=>c.id===st.classId);
@@ -1190,7 +1191,14 @@ const MPStudents=({students,setStudents,classes,sections,attendance})=>{
 
   const exportStudents=()=>{
     if(!students.length)return alert('내보낼 학생이 없습니다.');
-    const rows=students.map(s=>{
+    const sortedStudents=[...students].sort((a,b)=>{
+      const ca=classes.find(c=>c.id===a.classId),cb=classes.find(c=>c.id===b.classId);
+      const sa=sections.findIndex(s=>s.id===ca?.sectionId),sb=sections.findIndex(s=>s.id===cb?.sectionId);
+      if(sa!==sb)return sa-sb;
+      const ga=gradeNumOf(ca?.name||''),gb=gradeNumOf(cb?.name||'');
+      return ga!==gb?ga-gb:(a.name||'').localeCompare(b.name||'','ko');
+    });
+    const rows=sortedStudents.map(s=>{
       const c=classes.find(c=>c.id===s.classId);
       const sc=sections.find(se=>se.id===c?.sectionId);
       return {이름:s.name,부서:sc?.name||'',반:c?.name||'',학년:s.grade||'',성별:s.gender||'',생년월일:s.birthDate||'',학생연락처:s.phone||'',부모님연락처:s.parentPhone||'',주소:s.address||'',등록일:s.registeredDate||'',재적여부:s.active?'재적':'제적',메모:s.memo||''};
