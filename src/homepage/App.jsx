@@ -880,7 +880,7 @@ const ManagePanel=({onClose,authUser,onLogout,onWithdraw,site,setSite,sections,s
 
           {/* 콘텐츠 */}
           <div className="flex-1 overflow-y-auto p-4 bg-white">
-            {page==='dashboard'&&<MPDashboard students={students} classes={classes} sections={sections} attendance={attendance} meetings={meetings} selSec={selSec} setSelSec={setSelSec} nav={nav}/>}
+            {page==='dashboard'&&<MPDashboard students={students} teachers={teachers} classes={classes} sections={sections} attendance={attendance} meetings={meetings} selSec={selSec} setSelSec={setSelSec} nav={nav}/>}
             {page==='attendance'&&<MPAttendance students={students} classes={classes} sections={sections} attendance={attendance} setAttendance={setAttendance}/>}
             {page==='students'&&<MPStudents students={students} setStudents={setStudents} classes={classes} sections={sections} attendance={attendance}/>}
             {page==='stats'&&<MPStats students={students} classes={classes} sections={sections} attendance={attendance}/>}
@@ -905,11 +905,11 @@ const SectionTag=({sec})=>{
   return <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cols[sec?.color]||'bg-gray-100 text-gray-600'}`}>{sec?.name||''}</span>;
 };
 
-const MPDashboard=({students,classes,sections,attendance,meetings,nav})=>{
+const MPDashboard=({students,teachers,classes,sections,attendance,meetings,nav})=>{
   const active=students.filter(s=>s.active);
   const todayRecs=attendance[todayStr()]||{};
   const todayPresent=Object.values(todayRecs).filter(s=>s==='출석').length;
-  const weekBdays=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
+  const weekBdays=[...active.filter(s=>isThisWeek(s.birthDate)),...(teachers||[]).filter(t=>isThisWeek(t.birthDate)).map(t=>({...t,__teacher:true}))].sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const recent=[...meetings].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
 
   const latestDate=Object.keys(attendance).sort((a,b)=>b.localeCompare(a))[0];
@@ -954,9 +954,11 @@ const MPDashboard=({students,classes,sections,attendance,meetings,nav})=>{
           <div className="space-y-2">
             {weekBdays.map(s=>{
               const cls=classes.find(c=>c.id===s.classId);
-              return <div key={s.id} className="flex items-center gap-3 bg-pink-50 rounded-xl p-3">
+              const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId));
+              const label=s.__teacher?[sec?.name,s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' '):cls?.name;
+              return <div key={(s.__teacher?'t':'s')+s.id} className="flex items-center gap-3 bg-pink-50 rounded-xl p-3">
                 <div className="w-8 h-8 rounded-full bg-pink-200 flex items-center justify-center font-bold text-pink-700 text-sm">{s.name[0]}</div>
-                <div className="flex-1"><p className="font-medium text-sm">{s.name}</p><p className="text-xs text-gray-400">{cls?.name}</p></div>
+                <div className="flex-1"><p className="font-medium text-sm">{s.name}</p><p className="text-xs text-gray-400">{label}</p></div>
                 <span className="text-sm font-bold text-pink-600">{fmtWeekDiff(getWeekDiff(s.birthDate))}</span>
               </div>;
             })}
