@@ -217,7 +217,7 @@ function useLS(key,init){
 
   return [v,setV];
 }
-const todayStr=()=>new Date().toISOString().split('T')[0];
+const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;};
 const fmt=d=>d?d.replace(/-/g,'.'):''  ;
 function getDUB(bd){ if(!bd)return null; const now=new Date(),[,m,day]=bd.split('-').map(Number),next=new Date(now.getFullYear(),m-1,day); if(next<now)next.setFullYear(now.getFullYear()+1); const diff=Math.ceil((next-now)/86400000); return diff===365?0:diff; }
 const getWeekRange=()=>{ const today=new Date(); today.setHours(0,0,0,0); const sun=new Date(today); sun.setDate(today.getDate()-today.getDay()); const sat=new Date(sun); sat.setDate(sun.getDate()+6); return {sun,sat}; };
