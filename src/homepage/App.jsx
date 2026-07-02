@@ -1364,7 +1364,18 @@ const MPBirthday=({students,classes})=>{
 };
 
 const MPTeachers=({teachers,setTeachers,students,classes,sections})=>{
-  const [showAdd,setShowAdd]=useState(false),[editT,setEditT]=useState(null);
+  const [showAdd,setShowAdd]=useState(false),[editT,setEditT]=useState(null),[detailT,setDetailT]=useState(null);
+  const TDetail=({t})=>{
+    const cls=classes.find(c=>c.id===t.classId);
+    const sec=sections.find(se=>se.id===cls?.sectionId);
+    return <div className="space-y-4">
+      <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{t.name[0]}</div>
+      <div><div className="flex items-center gap-2"><h2 className="text-lg font-bold">{t.name}{isThisWeek(t.birthDate)&&' 🎂'}</h2></div><p className="text-sm text-gray-500">{[sec?.name,cls?.name].filter(Boolean).join(' · ')}</p></div></div>
+      <div className="grid grid-cols-2 gap-2 text-sm">{t.phone&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">연락처</p><p className="font-medium">{t.phone}</p></div>}{t.birthDate&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">생일</p><p className="font-medium">{fmt(t.birthDate)}</p></div>}{t.email&&<div className="bg-gray-50 rounded-xl p-3 col-span-2"><p className="text-xs text-gray-400 mb-1">이메일</p><p className="font-medium break-all">{t.email}</p></div>}</div>
+      {t.memo&&<div className="bg-amber-50 rounded-xl p-3 text-sm">📝 {t.memo}</div>}
+      <div className="flex gap-2"><button onClick={()=>setDetailT(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">닫기</button><button onClick={()=>{setEditT(t);setDetailT(null);}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">수정</button></div>
+    </div>;
+  };
   const TForm=({initial,onClose,onSave})=>{
     const [f,setF]=useState(initial||{name:'',classId:classes[0]?.id||'',phone:'',email:'',birthDate:'',memo:''});
     const set=(k,v)=>setF(p=>({...p,[k]:v}));
@@ -1375,11 +1386,12 @@ const MPTeachers=({teachers,setTeachers,students,classes,sections})=>{
     {sections.map(sec=>{
       const secCls=classes.filter(c=>c.sectionId===sec.id);
       return <div key={sec.id}><div className="text-xs font-bold tracking-wider text-gray-400 uppercase mb-2">{sec.emoji} {sec.name}</div>
-        {secCls.map(cls=>{const ts=teachers.filter(t=>t.classId===cls.id),ss=students.filter(s=>s.classId===cls.id&&s.active);return <div key={cls.id} className="bg-gray-50 rounded-xl p-3 mb-2 border border-gray-100"><div className="flex justify-between mb-2"><span className="font-semibold text-sm">{cls.name}</span><span className="text-xs text-gray-400">학생 {ss.length}명</span></div>{ts.length===0?<p className="text-xs text-gray-400">담당 선생님 없음</p>:ts.map(t=><div key={t.id} className="flex items-center gap-3 bg-white rounded-lg p-2.5 mb-1"><div className="w-8 h-8 rounded-lg bg-[#b8934a] text-white flex items-center justify-center font-bold text-sm">{t.name[0]}</div><div className="flex-1"><p className="font-medium text-sm">{t.name}</p><p className="text-xs text-gray-400">{t.phone}</p></div><div className="flex gap-1"><button onClick={()=>setEditT(t)} className="p-1 text-[#b8934a] hover:bg-[#b8934a]/10 rounded text-sm">✏️</button><button onClick={()=>{if(confirm('삭제?'))mergeArrayWrite('teachers_v3',setTeachers,p=>p.filter(x=>x.id!==t.id));}} className="p-1 text-red-400 hover:bg-red-50 rounded text-sm">🗑</button></div></div>)}</div>;})}
+        {secCls.map(cls=>{const ts=teachers.filter(t=>t.classId===cls.id),ss=students.filter(s=>s.classId===cls.id&&s.active);return <div key={cls.id} className="bg-gray-50 rounded-xl p-3 mb-2 border border-gray-100"><div className="flex justify-between mb-2"><span className="font-semibold text-sm">{cls.name}</span><span className="text-xs text-gray-400">학생 {ss.length}명</span></div>{ts.length===0?<p className="text-xs text-gray-400">담당 선생님 없음</p>:ts.map(t=><div key={t.id} onClick={()=>setDetailT(t)} className="flex items-center gap-3 bg-white rounded-lg p-2.5 mb-1 cursor-pointer hover:shadow-sm transition-shadow"><div className="w-8 h-8 rounded-lg bg-[#b8934a] text-white flex items-center justify-center font-bold text-sm">{t.name[0]}</div><div className="flex-1"><p className="font-medium text-sm">{t.name}{isThisWeek(t.birthDate)&&' 🎂'}</p><p className="text-xs text-gray-400">{t.phone}</p></div><div className="flex gap-1"><button onClick={e=>{e.stopPropagation();setEditT(t);}} className="p-1 text-[#b8934a] hover:bg-[#b8934a]/10 rounded text-sm">✏️</button><button onClick={e=>{e.stopPropagation();if(confirm('삭제?'))mergeArrayWrite('teachers_v3',setTeachers,p=>p.filter(x=>x.id!==t.id));}} className="p-1 text-red-400 hover:bg-red-50 rounded text-sm">🗑</button></div></div>)}</div>;})}
       </div>;
     })}
     {showAdd&&<Modal title="선생님 추가" onClose={()=>setShowAdd(false)}><TForm onSave={f=>mergeArrayWrite('teachers_v3',setTeachers,p=>[...p,{...f,id:nextId(p)}])} onClose={()=>setShowAdd(false)}/></Modal>}
     {editT&&<Modal title="선생님 수정" onClose={()=>setEditT(null)}><TForm initial={editT} onSave={f=>mergeArrayWrite('teachers_v3',setTeachers,p=>p.map(t=>t.id===f.id?f:t))} onClose={()=>setEditT(null)}/></Modal>}
+    {detailT&&<Modal title="선생님 상세" onClose={()=>setDetailT(null)}><TDetail t={detailT}/></Modal>}
   </div>;
 };
 
