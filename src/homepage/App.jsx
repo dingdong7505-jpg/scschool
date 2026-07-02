@@ -339,7 +339,7 @@ const MiniCalendar=({events,sections})=>{
 };
 
 // ── 공개 홈페이지 ─────────────────────────────────────────
-const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenManage,authUser,onRequestDownload,onRequestLogin})=>{
+const Homepage=({site,sections,classes,students,teachers,photos,prayers,events,onOpenManage,authUser,onRequestDownload,onRequestLogin})=>{
   const [scrolled,setScrolled]=useState(false);
   const [activeSec,setActiveSec]=useState(null); // null = 전체
   const [mobileMenu,setMobileMenu]=useState(false);
@@ -363,7 +363,7 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
   },[]);
 
   const active=students.filter(s=>s.active);
-  const weekBdays=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
+  const weekBdays=[...active.filter(s=>isThisWeek(s.birthDate)),...(teachers||[]).filter(t=>isThisWeek(t.birthDate)).map(t=>({...t,__teacher:true}))].sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const EMOJIS=['🌸','🌿','⛅','🌟','🙏','❤️','✝️','🎉','📖','🕊️'];
 
   // 섹션별 색상 테마
@@ -655,12 +655,14 @@ const Homepage=({site,sections,classes,students,photos,prayers,events,onOpenMana
               <div className="space-y-3">
                 {weekBdays.map(s=>{
                   const cls=classes.find(c=>c.id===s.classId);
+                  const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId));
+                  const label=s.__teacher?[sec?.name,s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' '):cls?.name;
                   return (
-                    <div key={s.id} className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm">
+                    <div key={(s.__teacher?'t':'s')+s.id} className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{s.name[0]}</div>
                       <div className="flex-1">
                         <p className="font-bold text-gray-900">{s.name}</p>
-                        <p className="text-sm text-gray-500">{cls?.name} · {getBMMDD(s.birthDate)}</p>
+                        <p className="text-sm text-gray-500">{label} · {getBMMDD(s.birthDate)}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-[#b8934a]">{fmtWeekDiff(getWeekDiff(s.birthDate))}</p>
@@ -2026,7 +2028,7 @@ const App = () => {
       `}</style>
 
       <Homepage
-        site={site} sections={sections} classes={classes} students={students}
+        site={site} sections={sections} classes={classes} students={students} teachers={teachers}
         prayers={prayers} setPrayers={setPrayers} photos={photos} events={events}
         onOpenManage={handleTeacherBtn} authUser={authUser} onRequestDownload={handleRequestDownload} onRequestLogin={handleRequestLogin}
       />
