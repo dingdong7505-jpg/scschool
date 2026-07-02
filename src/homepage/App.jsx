@@ -973,7 +973,7 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
   const [saved,setSaved]=useState(false);
   const secClasses=sortClasses(classes.filter(c=>c.sectionId===selSec),sections);
   const changeSec=v=>{setSelSec(v);const first=sortClasses(classes.filter(c=>c.sectionId===v),sections)[0];setSelCls(first?.id||'');setSaved(false);};
-  const CYCLE={'출석':'결석','결석':'조퇴','조퇴':'공결','공결':'출석'};
+  const CYCLE_ORDER=['출석','결석','조퇴','공결'];
   const secClassIds=secClasses.map(c=>c.id);
   const clsSts=(selCls==='all'
     ? students.filter(s=>secClassIds.includes(s.classId)&&s.active)
@@ -993,7 +993,7 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
       await pushSharedState('attendance_v3',merged);
     }catch(e){ console.warn('attendance sync failed',e); }
   };
-  const toggle=id=>{commitAttendance(selDate,day=>({...day,[id]:CYCLE[day[id]||'출석']}));setSaved(false);};
+  const toggle=id=>{commitAttendance(selDate,day=>{const next=CYCLE_ORDER[CYCLE_ORDER.indexOf(day[id])+1];const nr={...day};if(next)nr[id]=next;else delete nr[id];return nr;});setSaved(false);};
   const setAll=st=>{commitAttendance(selDate,day=>{const nr={...day};clsSts.forEach(s=>nr[s.id]=st);return nr;});setSaved(false);};
   const counts={출석:0,결석:0,조퇴:0,공결:0,미입력:0};
   clsSts.forEach(s=>{const st=recs[s.id];st?counts[st]++:counts['미입력']++;});
