@@ -187,7 +187,10 @@ function useLocalState(key,init){
   useEffect(()=>{ try{localStorage.setItem(key,JSON.stringify(v));}catch{} },[key,v]);
   return [v,setV];
 }
-function useLS(key,init){
+// autoPush=false 인 키(학생/교사/행사 등 목록 데이터)는 mergeArrayWrite로만 저장된다.
+// useLS가 전체 배열을 통째로 덮어쓰지 않게 하여, 오래된 로컬 사본이 다른 기기/세션에서
+// 추가한 데이터를 지우는 사고(lost update)를 막는다.
+function useLS(key,init,autoPush=true){
   const [v,setV]=useState(()=>{ try{const s=localStorage.getItem(key);return s?JSON.parse(s):(typeof init==='function'?init():init);}catch{return typeof init==='function'?init():init;} });
   const remoteReady=useRef(false);
   const initialRef=useRef(v);
@@ -198,19 +201,20 @@ function useLS(key,init){
     let alive=true;
     fetchSharedState(key).then(remote=>{
       if(!alive)return;
-      if(remote!==null){
-        if(currentRef.current===initialRef.current){ setV(remote); }
-        else { pushSharedState(key,currentRef.current); }
-      } else { pushSharedState(key,currentRef.current); }
+      // 원격에 데이터가 있으면 신뢰한다. 로드 중 로컬이 이미 바뀐 경우라도 그 변경은
+      // 각자의 저장 경로(mergeArrayWrite 등)로 반영되므로, 여기서 (오래됐을 수 있는)
+      // 로컬로 원격을 덮어쓰지 않는다 → 다른 기기/세션에서 추가한 데이터 유실 방지.
+      if(remote!==null){ if(currentRef.current===initialRef.current){ setV(remote); } }
+      else { pushSharedState(key,currentRef.current); } // 원격에 값이 아예 없을 때만 최초 시드
       remoteReady.current=true;
-    });
+    }).catch(e=>{ console.warn('useLS remote load failed',key,e); });
     return ()=>{ alive=false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[key]);
 
   useEffect(()=>{
     try{localStorage.setItem(key,JSON.stringify(v));}catch{}
-    if(!remoteReady.current)return;
+    if(!autoPush||!remoteReady.current)return;
     const t=setTimeout(()=>pushSharedState(key,v),500);
     return ()=>clearTimeout(t);
   },[key,v]);
@@ -1047,7 +1051,7 @@ const MPAttendance=({students,classes,sections,attendance,setAttendance})=>{
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">출석체크</h2><button onClick={()=>{if(confirm('모든 출석 기록을 초기화할까요? 되돌릴 수 없습니다.'))setAttendance({});}} className="px-3 py-1.5 border border-red-200 text-red-500 rounded-xl text-xs font-medium hover:bg-red-50">전체 초기화</button></div>
+      <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900 text-lg">출석체크</h2><button onClick={()=>{if(confirm('모든 출석 기록을 초기화할까요? 되돌릴 수 없습니다.')){setAttendance({});pushSharedState('attendance_v3',{});}}} className="px-3 py-1.5 border border-red-200 text-red-500 rounded-xl text-xs font-medium hover:bg-red-50">전체 초기화</button></div>
       <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="text-xs font-medium text-gray-600 block mb-1">날짜</label>
@@ -1979,15 +1983,15 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
 const App = () => {
   const [site, setSite] = useLS('site_v3', DEFAULT_SITE);
   const [sections, setSections] = useLS('sections_v3', DEFAULT_SECTIONS);
-  const [classes, setClasses] = useLS('classes_v3', DEFAULT_CLASSES);
-  const [students, setStudents] = useLS('students_v3', INITIAL_STUDENTS);
-  const [teachers, setTeachers] = useLS('teachers_v3', INITIAL_TEACHERS);
-  const [attendance, setAttendance] = useLS('attendance_v3', genAttendance(INITIAL_STUDENTS));
-  const [meetings, setMeetings] = useLS('meetings_v3', INITIAL_MEETINGS);
-  const [events, setEvents] = useLS('events_v3', []);
-  const [photos, setPhotos] = useLS('photos_v3', INITIAL_PHOTOS);
-  const [prayers, setPrayers] = useLS('prayers_v3', INITIAL_PRAYERS);
-  const [accounts, setAccounts] = useLS('accounts_v3', []);
+  const [classes, setClasses] = useLS('classes_v3', DEFAULT_CLASSES, false);
+  const [students, setStudents] = useLS('students_v3', INITIAL_STUDENTS, false);
+  const [teachers, setTeachers] = useLS('teachers_v3', INITIAL_TEACHERS, false);
+  const [attendance, setAttendance] = useLS('attendance_v3', genAttendance(INITIAL_STUDENTS), false);
+  const [meetings, setMeetings] = useLS('meetings_v3', INITIAL_MEETINGS, false);
+  const [events, setEvents] = useLS('events_v3', [], false);
+  const [photos, setPhotos] = useLS('photos_v3', INITIAL_PHOTOS, false);
+  const [prayers, setPrayers] = useLS('prayers_v3', INITIAL_PRAYERS, false);
+  const [accounts, setAccounts] = useLS('accounts_v3', [], false);
 
   const [authUser, setAuthUser] = useLocalState('authUser_v3', null);
   const [showLogin, setShowLogin] = useState(false);
