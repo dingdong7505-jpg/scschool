@@ -655,8 +655,8 @@ const Homepage=({site,sections,classes,students,teachers,photos,prayers,events,o
               <div className="space-y-3">
                 {weekBdays.map(s=>{
                   const cls=classes.find(c=>c.id===s.classId);
-                  const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId));
-                  const label=s.__teacher?[sec?.name,s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' '):cls?.name;
+                  const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId||s.pastorSectionId));
+                  const label=s.__teacher?[sec?.name,s.pastorSectionId?'담당교역자':s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' '):cls?.name;
                   return (
                     <div key={(s.__teacher?'t':'s')+s.id} className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{s.name[0]}</div>
@@ -954,8 +954,8 @@ const MPDashboard=({students,teachers,classes,sections,attendance,meetings,nav})
           <div className="space-y-2">
             {weekBdays.map(s=>{
               const cls=classes.find(c=>c.id===s.classId);
-              const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId));
-              const label=s.__teacher?[sec?.name,s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' '):cls?.name;
+              const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId||s.pastorSectionId));
+              const label=s.__teacher?[sec?.name,s.pastorSectionId?'담당교역자':s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' '):cls?.name;
               return <div key={(s.__teacher?'t':'s')+s.id} className="flex items-center gap-3 bg-pink-50 rounded-xl p-3">
                 <div className="w-8 h-8 rounded-full bg-pink-200 flex items-center justify-center font-bold text-pink-700 text-sm">{s.name[0]}</div>
                 <div className="flex-1"><p className="font-medium text-sm">{s.name}</p><p className="text-xs text-gray-400">{label}</p></div>
@@ -1355,7 +1355,7 @@ const MPStats=({students,classes,sections,attendance})=>{
 
 const MPBirthday=({students,teachers,classes,sections})=>{
   const active=[...students.filter(s=>s.active&&s.birthDate),...(teachers||[]).filter(t=>t.birthDate).map(t=>({...t,__teacher:true}))];
-  const getCls=s=>{if(!s.__teacher)return classes.find(c=>c.id===s.classId)?.name||'';const cls=classes.find(c=>c.id===s.classId);const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId));return [sec?.name,s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' ');};
+  const getCls=s=>{if(!s.__teacher)return classes.find(c=>c.id===s.classId)?.name||'';const cls=classes.find(c=>c.id===s.classId);const sec=sections.find(se=>se.id===(cls?.sectionId||s.assistSectionId||s.pastorSectionId));return [sec?.name,s.pastorSectionId?'담당교역자':s.assistSectionId?'보조선생님':'선생님'].filter(Boolean).join(' ');};
   const thisWeek=active.filter(s=>isThisWeek(s.birthDate)).sort((a,b)=>getWeekDiff(a.birthDate)-getWeekDiff(b.birthDate));
   const thisMonth=active.filter(s=>isThisMonth(s.birthDate)&&!isThisWeek(s.birthDate));
   const byMonth=Array.from({length:12},(_,i)=>({month:i+1,ss:active.filter(s=>parseInt(s.birthDate.split('-')[1])===i+1)})).filter(m=>m.ss.length);
@@ -1371,19 +1371,19 @@ const MPTeachers=({teachers,setTeachers,students,classes,sections})=>{
   const [showAdd,setShowAdd]=useState(false),[editT,setEditT]=useState(null),[detailT,setDetailT]=useState(null);
   const TDetail=({t})=>{
     const cls=classes.find(c=>c.id===t.classId);
-    const sec=sections.find(se=>se.id===(cls?.sectionId||t.assistSectionId));
+    const sec=sections.find(se=>se.id===(cls?.sectionId||t.assistSectionId||t.pastorSectionId));
     return <div className="space-y-4">
       <div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0" style={{background:'linear-gradient(135deg,#b8934a,#d4aa6e)'}}>{t.name[0]}</div>
-      <div><div className="flex items-center gap-2"><h2 className="text-lg font-bold">{t.name}{isThisWeek(t.birthDate)&&' 🎂'}</h2></div><p className="text-sm text-gray-500">{[sec?.name,cls?cls.name:(t.assistSectionId?'보조선생님':'')].filter(Boolean).join(' · ')}</p></div></div>
+      <div><div className="flex items-center gap-2"><h2 className="text-lg font-bold">{t.name}{isThisWeek(t.birthDate)&&' 🎂'}</h2></div><p className="text-sm text-gray-500">{[sec?.name,cls?cls.name:(t.pastorSectionId?'담당교역자':t.assistSectionId?'보조선생님':'')].filter(Boolean).join(' · ')}</p></div></div>
       <div className="grid grid-cols-2 gap-2 text-sm">{t.phone&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">연락처</p><p className="font-medium">{t.phone}</p></div>}{t.birthDate&&<div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-400 mb-1">생일</p><p className="font-medium">{fmt(t.birthDate)}</p></div>}{t.email&&<div className="bg-gray-50 rounded-xl p-3 col-span-2"><p className="text-xs text-gray-400 mb-1">이메일</p><p className="font-medium break-all">{t.email}</p></div>}</div>
       {t.memo&&<div className="bg-amber-50 rounded-xl p-3 text-sm">📝 {t.memo}</div>}
       <div className="flex gap-2"><button onClick={()=>setDetailT(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">닫기</button><button onClick={()=>{setEditT(t);setDetailT(null);}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">수정</button></div>
     </div>;
   };
   const TForm=({initial,onClose,onSave})=>{
-    const [f,setF]=useState(initial||{name:'',classId:classes[0]?.id||'',assistSectionId:'',phone:'',email:'',birthDate:'',memo:''});
+    const [f,setF]=useState(initial||{name:'',classId:classes[0]?.id||'',assistSectionId:'',pastorSectionId:'',phone:'',email:'',birthDate:'',memo:''});
     const set=(k,v)=>setF(p=>({...p,[k]:v}));
-    return <div className="space-y-3"><div className="grid grid-cols-2 gap-3"><Inp label="이름" value={f.name} onChange={v=>set('name',v)} required/><Sel label="담당" value={f.assistSectionId?`asst:${f.assistSectionId}`:`cls:${f.classId}`} onChange={v=>{if(v.startsWith('asst:'))setF(p=>({...p,assistSectionId:v.slice(5),classId:''}));else setF(p=>({...p,classId:v.slice(4),assistSectionId:''}));}} options={[...sortClasses(classes,sections).map(c=>({value:`cls:${c.id}`,label:c.name})),...sections.map(s=>({value:`asst:${s.id}`,label:`${s.name} 보조선생님`}))]}/></div><div className="grid grid-cols-2 gap-3"><Inp label="연락처" value={f.phone} onChange={v=>set('phone',v)}/><Inp label="생일" type="date" value={f.birthDate||''} onChange={v=>set('birthDate',v)}/></div><Inp label="이메일" type="email" value={f.email} onChange={v=>set('email',v)}/><Inp label="메모" value={f.memo} onChange={v=>set('memo',v)}/><div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.name)return alert('이름 입력');onSave(f);onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">저장</button></div></div>;
+    return <div className="space-y-3"><div className="grid grid-cols-2 gap-3"><Inp label="이름" value={f.name} onChange={v=>set('name',v)} required/><Sel label="담당" value={f.pastorSectionId?`pastor:${f.pastorSectionId}`:f.assistSectionId?`asst:${f.assistSectionId}`:`cls:${f.classId}`} onChange={v=>{if(v.startsWith('pastor:'))setF(p=>({...p,pastorSectionId:v.slice(7),assistSectionId:'',classId:''}));else if(v.startsWith('asst:'))setF(p=>({...p,assistSectionId:v.slice(5),pastorSectionId:'',classId:''}));else setF(p=>({...p,classId:v.slice(4),assistSectionId:'',pastorSectionId:''}));}} options={[...sections.map(s=>({value:`pastor:${s.id}`,label:`${s.name} 담당교역자`})),...sortClasses(classes,sections).map(c=>({value:`cls:${c.id}`,label:c.name})),...sections.map(s=>({value:`asst:${s.id}`,label:`${s.name} 보조선생님`}))]}/></div><div className="grid grid-cols-2 gap-3"><Inp label="연락처" value={f.phone} onChange={v=>set('phone',v)}/><Inp label="생일" type="date" value={f.birthDate||''} onChange={v=>set('birthDate',v)}/></div><Inp label="이메일" type="email" value={f.email} onChange={v=>set('email',v)}/><Inp label="메모" value={f.memo} onChange={v=>set('memo',v)}/><div className="flex gap-2 pt-1"><button onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm">취소</button><button onClick={()=>{if(!f.name)return alert('이름 입력');onSave(f);onClose();}} className="flex-1 py-2.5 bg-[#1a1a1a] text-white rounded-xl text-sm">저장</button></div></div>;
   };
   const teacherCard=t=><div key={t.id} onClick={()=>setDetailT(t)} className="flex items-center gap-3 bg-white rounded-lg p-2.5 mb-1 cursor-pointer hover:shadow-sm transition-shadow"><div className="w-8 h-8 rounded-lg bg-[#b8934a] text-white flex items-center justify-center font-bold text-sm">{t.name[0]}</div><div className="flex-1"><p className="font-medium text-sm">{t.name}{isThisWeek(t.birthDate)&&' 🎂'}</p><p className="text-xs text-gray-400">{t.phone}</p></div><div className="flex gap-1"><button onClick={e=>{e.stopPropagation();setEditT(t);}} className="p-1 text-[#b8934a] hover:bg-[#b8934a]/10 rounded text-sm">✏️</button><button onClick={e=>{e.stopPropagation();if(confirm('삭제?'))mergeArrayWrite('teachers_v3',setTeachers,p=>p.filter(x=>x.id!==t.id));}} className="p-1 text-red-400 hover:bg-red-50 rounded text-sm">🗑</button></div></div>;
   return <div className="space-y-4">
@@ -1391,7 +1391,9 @@ const MPTeachers=({teachers,setTeachers,students,classes,sections})=>{
     {sections.map(sec=>{
       const secCls=classes.filter(c=>c.sectionId===sec.id);
       const assistTs=teachers.filter(t=>t.assistSectionId===sec.id);
+      const pastorTs=teachers.filter(t=>t.pastorSectionId===sec.id);
       return <div key={sec.id}><div className="text-xs font-bold tracking-wider text-gray-400 uppercase mb-2">{sec.emoji} {sec.name}</div>
+        <div className="bg-amber-50 rounded-xl p-3 mb-2 border border-amber-100"><div className="flex justify-between mb-2"><span className="font-semibold text-sm">담당교역자</span><span className="text-xs text-gray-400">{pastorTs.length}명</span></div>{pastorTs.length===0?<p className="text-xs text-gray-400">담당교역자 없음</p>:pastorTs.map(teacherCard)}</div>
         {secCls.map(cls=>{const ts=teachers.filter(t=>t.classId===cls.id),ss=students.filter(s=>s.classId===cls.id&&s.active);return <div key={cls.id} className="bg-gray-50 rounded-xl p-3 mb-2 border border-gray-100"><div className="flex justify-between mb-2"><span className="font-semibold text-sm">{cls.name}</span><span className="text-xs text-gray-400">학생 {ss.length}명</span></div>{ts.length===0?<p className="text-xs text-gray-400">담당 선생님 없음</p>:ts.map(teacherCard)}</div>;})}
         <div className="bg-gray-50 rounded-xl p-3 mb-2 border border-gray-100"><div className="flex justify-between mb-2"><span className="font-semibold text-sm">보조선생님</span><span className="text-xs text-gray-400">{assistTs.length}명</span></div>{assistTs.length===0?<p className="text-xs text-gray-400">보조선생님 없음</p>:assistTs.map(teacherCard)}</div>
       </div>;
