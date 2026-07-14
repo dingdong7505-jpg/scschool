@@ -1307,14 +1307,16 @@ const MPStats=({students,classes,sections,attendance})=>{
   const latestDate=Object.keys(attendance).sort((a,b)=>b.localeCompare(a))[0];
   const latestRec=latestDate?attendance[latestDate]:null;
   const totP=latestRec?active.filter(s=>latestRec[s.id]==='출석').length:0;
+  const [statSec,setStatSec]=useState('all');
   const monthly=useMemo(()=>{
+    const scope=statSec==='all'?active:active.filter(s=>classes.find(c=>c.id===s.classId)?.sectionId===statSec);
     const m=[];
-    for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const ym=d.toISOString().slice(0,7),lbl=`${d.getMonth()+1}월`;
+    for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const ym=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,lbl=`${d.getMonth()+1}월`;
     const recs=Object.entries(attendance).filter(([k])=>k.startsWith(ym));let t=0,p=0;
-    recs.forEach(([,r])=>active.forEach(s=>{t++;if(r[s.id]==='출석')p++;}));
+    recs.forEach(([,r])=>{if(!scope.some(s=>r[s.id]))return;scope.forEach(s=>{t++;if(r[s.id]==='출석')p++;});});
     m.push({lbl,rate:t?Math.round(p/t*100):0});}
     return m;
-  },[students,attendance]);
+  },[students,attendance,classes,statSec]);
   return <div className="space-y-4">
     <h2 className="font-bold text-gray-900 text-lg">통계</h2>
     <div className="grid grid-cols-2 gap-3">
@@ -1322,7 +1324,9 @@ const MPStats=({students,classes,sections,attendance})=>{
       <div className="bg-gray-50 rounded-2xl p-4 text-center"><p className="text-2xl font-bold text-[#3d6b4f]">{active.length}명 중 {totP}명</p><p className="text-xs text-gray-500 mt-1">{latestDate?`최근 출석 (${fmt(latestDate)})`:'출석 기록 없음'}</p></div>
     </div>
     <div className="bg-gray-50 rounded-2xl p-4">
-      <h3 className="font-semibold text-gray-800 mb-3 text-sm">월별 출석률</h3>
+      <div className="flex items-center justify-between mb-3 gap-2"><h3 className="font-semibold text-gray-800 text-sm">월별 출석률</h3>
+        <select value={statSec} onChange={e=>setStatSec(e.target.value)} className="border border-gray-200 rounded-lg px-2 py-1 text-xs outline-none focus:border-[#b8934a] bg-white"><option value="all">전체</option>{sections.map(s=><option key={s.id} value={s.id}>{s.emoji} {s.name}</option>)}</select>
+      </div>
       <div className="flex items-end gap-1 h-28">
         {monthly.map(({lbl,rate})=><div key={lbl} className="flex-1 flex flex-col items-center gap-1">
           <span className="text-xs font-bold text-[#b8934a]">{rate}%</span>
