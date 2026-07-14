@@ -1311,7 +1311,7 @@ const MPStats=({students,classes,sections,attendance})=>{
     const m=[];
     for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);const ym=d.toISOString().slice(0,7),lbl=`${d.getMonth()+1}월`;
     const recs=Object.entries(attendance).filter(([k])=>k.startsWith(ym));let t=0,p=0;
-    recs.forEach(([,r])=>active.forEach(s=>{if(r[s.id]){t++;if(r[s.id]==='출석')p++;}}));
+    recs.forEach(([,r])=>active.forEach(s=>{t++;if(r[s.id]==='출석')p++;}));
     m.push({lbl,rate:t?Math.round(p/t*100):0});}
     return m;
   },[students,attendance]);
