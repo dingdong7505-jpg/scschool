@@ -1809,11 +1809,25 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
   const [otpCode, setOtpCode] = useState('');
   const [otpBusy, setOtpBusy] = useState(false);
 
+  // 로컬 계정 목록이 아직 동기화 전이거나 오래됐을 수 있으므로,
+  // 이메일을 못 찾으면 서버의 최신 계정 목록을 다시 받아 한 번 더 확인한다.
+  const findAccount = async (emailRaw) => {
+    const email = (emailRaw || '').trim().toLowerCase();
+    let acc = accounts.find(a => (a.email || '').trim().toLowerCase() === email);
+    if (!acc) {
+      try {
+        const remote = await fetchSharedState('accounts_v3');
+        if (Array.isArray(remote)) { setAccounts(remote); acc = remote.find(a => (a.email || '').trim().toLowerCase() === email); }
+      } catch (e) { console.warn('account refetch failed', e); }
+    }
+    return acc;
+  };
+
   const handleFindAccount = async () => {
-    const acc = accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase());
-    if (!acc) { setErr('등록되지 않은 이메일입니다.'); return; }
     setOtpBusy(true);
-    const { error } = await sendOtp(form.email);
+    const acc = await findAccount(form.email);
+    if (!acc) { setOtpBusy(false); setErr('등록되지 않은 이메일입니다.'); return; }
+    const { error } = await sendOtp(form.email.trim());
     setOtpBusy(false);
     if (error) { setErr('인증코드 발송 실패: ' + error); return; }
     setResetAcc(acc); setResetStep('verify'); setErr('');
@@ -1835,9 +1849,9 @@ const AuthModal = ({ site, accounts, setAccounts, onSuccess, onClose }) => {
     setMsg('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.');
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!form.email || !form.password) { setErr('이메일과 비밀번호를 입력하세요.'); return; }
-    const acc = accounts.find(a => a.email.toLowerCase() === form.email.toLowerCase());
+    const acc = await findAccount(form.email);
     if (!acc) { setErr('등록되지 않은 이메일입니다.'); return; }
     if (acc.passwordHash !== hashPw(form.password)) { setErr('비밀번호가 틀렸습니다.'); return; }
     onSuccess({ name: acc.name, email: acc.email, provider: 'email', role: acc.role || 'teacher' });
